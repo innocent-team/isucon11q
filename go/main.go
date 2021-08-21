@@ -1302,19 +1302,16 @@ func postIsuCondition(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	var isus []struct {
-		Character string `db:"character" json:"character"`
-	}
-	err = tx.GetContext(ctx, &isus, "SELECT `character` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	var character string
+	err = tx.GetContext(ctx, &character, "SELECT `character` FROM `isu` WHERE `jia_isu_uuid` = ? LIMIT 1", jiaIsuUUID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.String(http.StatusNotFound, "not found: isu")
+		}
 		c.Logger().Errorf("db error: %v", err)
 		log.Print("!!!!!!!!!!!!!SELECT COUNT(*) FROM `isu` SERVER ERROR!!!!!!!!!!!!!!!!!!!!!!!!")
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	if len(isus) == 0 {
-		return c.String(http.StatusNotFound, "not found: isu")
-	}
-	character := isus[0].Character
 
 	for _, cond := range req {
 		timestamp := time.Unix(cond.Timestamp, 0)

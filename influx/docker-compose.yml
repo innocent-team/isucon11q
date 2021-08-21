@@ -1,0 +1,19 @@
+version: "2"
+
+services:
+  influxdb:
+    image: influxdb:1.6
+    container_name: local-influxdb  #grafanaからアクセスするための名前
+    ports:
+      - 8086:8086
+
+  grafana:
+    image: grafana/grafana:7.1.1
+    ports:
+      - 8085:3000 #grafanaのポート
+    user: "472"
+    depends_on:
+      - influxdb
+    environment:
+      - GF_SERVER_ROOT_URL=http://192.168.77.6:8085
+      - GF_SECURITY_ADMIN_PASSWORD=admin

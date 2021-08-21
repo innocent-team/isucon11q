@@ -6,7 +6,8 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gorilla/sessions v1.2.1
-	github.com/hiko1129/echo-pprof v1.0.1 // indirect
+	github.com/hiko1129/echo-pprof v1.0.1
+	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/labstack/echo v3.2.3+incompatible // indirect
 	github.com/labstack/echo/v4 v4.3.0

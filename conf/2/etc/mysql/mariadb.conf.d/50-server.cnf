@@ -28,10 +28,10 @@ query_cache_type = ON
 
 ### SLOW LOGS
 
-slow_query_log = 1
-slow_query_log_file = /var/log/mysql/mysql-slow.log
-long_query_time = 0 #slow query time
-log-queries-not-using-indexes
+#slow_query_log = 1
+#slow_query_log_file = /var/log/mysql/mysql-slow.log
+#long_query_time = 0 #slow query time
+#log-queries-not-using-indexes
 
 #### 
 

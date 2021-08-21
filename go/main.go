@@ -1292,9 +1292,11 @@ func postIsuCondition(c echo.Context) error {
 	err = tx.GetContext(ctx, &count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
+		log.Print("!!!!!!!!!!!!!SELECT COUNT(*) FROM `isu` SERVER ERROR!!!!!!!!!!!!!!!!!!!!!!!!")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	if count == 0 {
+		log.Print("!!!!!!!!!!!!!SELECT COUNT(*) FROM `isu` not found!!!!!!!!!!!!!!!!!!!!!!!!")
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 

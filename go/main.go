@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"database/sql"
 	"encoding/json"
@@ -266,6 +267,7 @@ func getSession(r *http.Request) (*sessions.Session, error) {
 }
 
 func getUserIDFromSession(c echo.Context) (string, int, error) {
+	ctx := c.Request().Context()
 	session, err := getSession(c.Request())
 	if err != nil {
 		return "", http.StatusInternalServerError, fmt.Errorf("failed to get session: %v", err)
@@ -278,7 +280,7 @@ func getUserIDFromSession(c echo.Context) (string, int, error) {
 	jiaUserID := _jiaUserID.(string)
 	var count int
 
-	err = db.Get(&count, "SELECT COUNT(*) FROM `user` WHERE `jia_user_id` = ?",
+	err = db.GetContext(ctx, &count, "SELECT COUNT(*) FROM `user` WHERE `jia_user_id` = ?",
 		jiaUserID)
 	if err != nil {
 		return "", http.StatusInternalServerError, fmt.Errorf("db error: %v", err)
@@ -291,9 +293,9 @@ func getUserIDFromSession(c echo.Context) (string, int, error) {
 	return jiaUserID, 0, nil
 }
 
-func getJIAServiceURL(tx *sqlx.Tx) string {
+func getJIAServiceURL(ctx context.Context, tx *sqlx.Tx) string {
 	var config Config
-	err := tx.Get(&config, "SELECT * FROM `isu_association_config` WHERE `name` = ?", "jia_service_url")
+	err := tx.GetContext(ctx, &config, "SELECT * FROM `isu_association_config` WHERE `name` = ?", "jia_service_url")
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			log.Print(err)
@@ -306,6 +308,7 @@ func getJIAServiceURL(tx *sqlx.Tx) string {
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
+	ctx := c.Request().Context()
 	var request InitializeRequest
 	err := c.Bind(&request)
 	if err != nil {
@@ -321,7 +324,7 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	_, err = db.Exec(
+	_, err = db.ExecContext(ctx,
 		"INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)",
 		"jia_service_url",
 		request.JIAServiceURL,
@@ -339,6 +342,7 @@ func postInitialize(c echo.Context) error {
 // POST /api/auth
 // サインアップ・サインイン
 func postAuthentication(c echo.Context) error {
+	ctx := c.Request().Context()
 	reqJwt := strings.TrimPrefix(c.Request().Header.Get("Authorization"), "Bearer ")
 
 	token, err := jwt.Parse(reqJwt, func(token *jwt.Token) (interface{}, error) {
@@ -371,7 +375,7 @@ func postAuthentication(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid JWT payload")
 	}
 
-	_, err = db.Exec("INSERT IGNORE INTO user (`jia_user_id`) VALUES (?)", jiaUserID)
+	_, err = db.ExecContext(ctx, "INSERT IGNORE INTO user (`jia_user_id`) VALUES (?)", jiaUserID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -442,6 +446,7 @@ func getMe(c echo.Context) error {
 // GET /api/isu
 // ISUの一覧を取得
 func getIsuList(c echo.Context) error {
+	ctx := c.Request().Context()
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -460,7 +465,7 @@ func getIsuList(c echo.Context) error {
 	defer tx.Rollback()
 
 	isuList := []Isu{}
-	err = tx.Select(
+	err = tx.SelectContext(ctx,
 		&isuList,
 		"SELECT * FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC",
 		jiaUserID)
@@ -473,7 +478,7 @@ func getIsuList(c echo.Context) error {
 	for _, isu := range isuList {
 		var lastCondition IsuCondition
 		foundLastCondition := true
-		err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
+		err = tx.GetContext(ctx, &lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
 			isu.JIAIsuUUID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -524,6 +529,7 @@ func getIsuList(c echo.Context) error {
 // POST /api/isu
 // ISUを登録
 func postIsu(c echo.Context) error {
+	ctx := c.Request().Context()
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -576,7 +582,7 @@ func postIsu(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec("INSERT INTO `isu`"+
+	_, err = tx.ExecContext(ctx, "INSERT INTO `isu`"+
 		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)",
 		jiaIsuUUID, isuName, image, jiaUserID)
 	if err != nil {
@@ -590,7 +596,7 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	targetURL := getJIAServiceURL(tx) + "/api/activate"
+	targetURL := getJIAServiceURL(ctx, tx) + "/api/activate"
 	body := JIAServiceRequest{postIsuConditionTargetBaseURL, jiaIsuUUID}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
@@ -630,14 +636,14 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	_, err = tx.Exec("UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
+	_, err = tx.ExecContext(ctx, "UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	var isu Isu
-	err = tx.Get(
+	err = tx.GetContext(ctx,
 		&isu,
 		"SELECT * FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 		jiaUserID, jiaIsuUUID)
@@ -658,6 +664,7 @@ func postIsu(c echo.Context) error {
 // GET /api/isu/:jia_isu_uuid
 // ISUの情報を取得
 func getIsuID(c echo.Context) error {
+	ctx := c.Request().Context()
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -671,7 +678,7 @@ func getIsuID(c echo.Context) error {
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 
 	var res Isu
-	err = db.Get(&res, "SELECT * FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+	err = db.GetContext(ctx, &res, "SELECT * FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 		jiaUserID, jiaIsuUUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -688,6 +695,7 @@ func getIsuID(c echo.Context) error {
 // GET /api/isu/:jia_isu_uuid/icon
 // ISUのアイコンを取得
 func getIsuIcon(c echo.Context) error {
+	ctx := c.Request().Context()
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -701,7 +709,7 @@ func getIsuIcon(c echo.Context) error {
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 
 	var image []byte
-	err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+	err = db.GetContext(ctx, &image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 		jiaUserID, jiaIsuUUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -718,6 +726,7 @@ func getIsuIcon(c echo.Context) error {
 // GET /api/isu/:jia_isu_uuid/graph
 // ISUのコンディショングラフ描画のための情報を取得
 func getIsuGraph(c echo.Context) error {
+	ctx := c.Request().Context()
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -747,7 +756,7 @@ func getIsuGraph(c echo.Context) error {
 	defer tx.Rollback()
 
 	var count int
-	err = tx.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+	err = tx.GetContext(ctx, &count, "SELECT COUNT(*) FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 		jiaUserID, jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
@@ -939,6 +948,7 @@ func calculateGraphDataPoint(isuConditions []IsuCondition) (GraphDataPoint, erro
 // GET /api/condition/:jia_isu_uuid
 // ISUのコンディションを取得
 func getIsuConditions(c echo.Context) error {
+	ctx := c.Request().Context()
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -979,7 +989,7 @@ func getIsuConditions(c echo.Context) error {
 	}
 
 	var isuName string
-	err = db.Get(&isuName,
+	err = db.GetContext(ctx, &isuName,
 		"SELECT name FROM `isu` WHERE `jia_isu_uuid` = ? AND `jia_user_id` = ?",
 		jiaIsuUUID, jiaUserID,
 	)
@@ -992,7 +1002,7 @@ func getIsuConditions(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	conditionsResponse, err := getIsuConditionsFromDB(db, jiaIsuUUID, endTime, conditionLevel, startTime, conditionLimit, isuName)
+	conditionsResponse, err := getIsuConditionsFromDB(ctx, db, jiaIsuUUID, endTime, conditionLevel, startTime, conditionLimit, isuName)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -1001,21 +1011,21 @@ func getIsuConditions(c echo.Context) error {
 }
 
 // ISUのコンディションをDBから取得
-func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, conditionLevel map[string]interface{}, startTime time.Time,
+func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string, endTime time.Time, conditionLevel map[string]interface{}, startTime time.Time,
 	limit int, isuName string) ([]*GetIsuConditionResponse, error) {
 
 	conditions := []IsuCondition{}
 	var err error
 
 	if startTime.IsZero() {
-		err = db.Select(&conditions,
+		err = db.SelectContext(ctx, &conditions,
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
 				"	ORDER BY `timestamp` DESC",
 			jiaIsuUUID, endTime,
 		)
 	} else {
-		err = db.Select(&conditions,
+		err = db.SelectContext(ctx, &conditions,
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
 				"	AND ? <= `timestamp`"+
@@ -1077,8 +1087,9 @@ func calculateConditionLevel(condition string) (string, error) {
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
+	ctx := c.Request().Context()
 	characterList := []Isu{}
-	err := db.Select(&characterList, "SELECT `character` FROM `isu` GROUP BY `character`")
+	err := db.SelectContext(ctx, &characterList, "SELECT `character` FROM `isu` GROUP BY `character`")
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -1088,7 +1099,7 @@ func getTrend(c echo.Context) error {
 
 	for _, character := range characterList {
 		isuList := []Isu{}
-		err = db.Select(&isuList,
+		err = db.SelectContext(ctx, &isuList,
 			"SELECT * FROM `isu` WHERE `character` = ?",
 			character.Character,
 		)
@@ -1102,7 +1113,7 @@ func getTrend(c echo.Context) error {
 		characterCriticalIsuConditions := []*TrendCondition{}
 		for _, isu := range isuList {
 			conditions := []IsuCondition{}
-			err = db.Select(&conditions,
+			err = db.SelectContext(ctx, &conditions,
 				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC",
 				isu.JIAIsuUUID,
 			)
@@ -1158,6 +1169,7 @@ func getTrend(c echo.Context) error {
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
+	ctx := c.Request().Context()
 	// TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
 	dropProbability := 0.9
 	if rand.Float64() <= dropProbability {
@@ -1186,7 +1198,7 @@ func postIsuCondition(c echo.Context) error {
 	defer tx.Rollback()
 
 	var count int
-	err = tx.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	err = tx.GetContext(ctx, &count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -1202,7 +1214,7 @@ func postIsuCondition(c echo.Context) error {
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
 
-		_, err = tx.Exec(
+		_, err = tx.ExecContext(ctx,
 			"INSERT INTO `isu_condition`"+
 				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
 				"	VALUES (?, ?, ?, ?, ?)",

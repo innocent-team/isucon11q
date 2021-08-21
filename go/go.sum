@@ -306,6 +306,8 @@ github.com/signalfx/signalfx-go-tracing/contrib/jmoiron/sqlx v1.10.0 h1:LOR1mD4T
 github.com/signalfx/signalfx-go-tracing/contrib/jmoiron/sqlx v1.10.0/go.mod h1:bQqsKk5XT1hU8RfYO75rctUUS1FYFuyUfnQUVaXfgM8=
 github.com/signalfx/signalfx-go-tracing/contrib/labstack/echo.v4 v1.10.0 h1:tftHfE9CaF8O7mfEhtC0Qpoh9JtN0BmJ8vQqqKm8IGI=
 github.com/signalfx/signalfx-go-tracing/contrib/labstack/echo.v4 v1.10.0/go.mod h1:BOh0smnQVEEmkhWY8h0PgekTWGy6QVYmwqFIVUYQKSw=
+github.com/signalfx/signalfx-go-tracing/contrib/net/http v1.10.0 h1:9cFZa5LduCg0PGN3ZD2lFZqRgzDwqp0pJy04CIuIHIQ=
+github.com/signalfx/signalfx-go-tracing/contrib/net/http v1.10.0/go.mod h1:xyvmAxI7l6JlYgsyxL+xr7gdS0VyNGbBaPrOW9S/o1E=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d/go.mod h1:OnSkiWE9lh6wB0YB77sQom3nweQdgAjqCqsofrRNTgc=

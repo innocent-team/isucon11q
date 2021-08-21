@@ -28,6 +28,7 @@ import (
 	sqltrace "github.com/signalfx/signalfx-go-tracing/contrib/database/sql"
 	sqlxtrace "github.com/signalfx/signalfx-go-tracing/contrib/jmoiron/sqlx"
 	echotrace "github.com/signalfx/signalfx-go-tracing/contrib/labstack/echo.v4"
+	httptrace "github.com/signalfx/signalfx-go-tracing/contrib/net/http"
 	"github.com/signalfx/signalfx-go-tracing/tracing"
 )
 
@@ -620,7 +621,8 @@ func postIsu(c echo.Context) error {
 	}
 
 	reqJIA.Header.Set("Content-Type", "application/json")
-	res, err := http.DefaultClient.Do(reqJIA)
+	httpClient := httptrace.WrapClient(http.DefaultClient)
+	res, err := httpClient.Do(reqJIA)
 	if err != nil {
 		c.Logger().Errorf("failed to request to JIAService: %v", err)
 		return c.NoContent(http.StatusInternalServerError)

@@ -21,6 +21,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
+	echopprof "github.com/hiko1129/echo-pprof"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -218,6 +219,7 @@ func main() {
 	e := echo.New()
 	e.Debug = true
 	e.Logger.SetLevel(log.DEBUG)
+	echopprof.Wrap(e)
 	e.Use(echotrace.Middleware(echotrace.WithServiceName(splunkServiceName)))
 
 	e.Use(middleware.Logger())

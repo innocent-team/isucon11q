@@ -780,6 +780,11 @@ func getIsuIconDevonly(c echo.Context) error {
 // ISUのコンディショングラフ描画のための情報を取得
 func getIsuGraph(c echo.Context) error {
 	ctx := c.Request().Context()
+	jiaIsuUUID := c.Param("jia_isu_uuid")
+	if c.Request().Header.Get("If-None-Match") == jiaIsuUUID {
+		return c.NoContent(http.StatusNotModified)
+	}
+
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -790,7 +795,6 @@ func getIsuGraph(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	jiaIsuUUID := c.Param("jia_isu_uuid")
 	datetimeStr := c.QueryParam("datetime")
 	if datetimeStr == "" {
 		return c.String(http.StatusBadRequest, "missing: datetime")

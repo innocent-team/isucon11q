@@ -1092,7 +1092,8 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 			"endTime":    endTime,
 		})
 		influxResp, err = c.Query(query)
-		log.Printf("error: %v", influxResp.Err)
+		log.Printf("error: %v", err)
+		log.Printf("influx error: %v", influxResp.Err)
 		log.Printf("values: %+v", influxResp.Results)
 		for _, v := range influxResp.Results[0].Series[0].Values {
 			condition := IsuCondition{}

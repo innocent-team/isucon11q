@@ -730,6 +730,15 @@ func getIsuIcon(c echo.Context) error {
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 
 	var image []byte
+	image, err = ioutil.ReadFile(iconDirectory + jiaIsuUUID)
+	if err == nil {
+		return c.Blob(http.StatusOK, "", image)
+	} else {
+		if !os.IsNotExist(err) {
+			c.Logger().Errorf("failed to read icon file: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+	}
 	err = db.GetContext(ctx, &image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 		jiaUserID, jiaIsuUUID)
 	if err != nil {

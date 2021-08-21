@@ -1276,7 +1276,7 @@ func postIsuCondition(c echo.Context) error {
 	if err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	} else if len(req) == 0 {
-		return c.String(http.StatusBadRequest, "bad request body")
+		return c.String(http.StatusBadRequest, fmt.Sprintf("%+v", req))
 	}
 	log.Print("!!!!!!!!!!!!!request body ok")
 

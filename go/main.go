@@ -217,8 +217,7 @@ func init() {
 
 func main() {
 	e := echo.New()
-	e.Debug = true
-	e.Logger.SetLevel(log.DEBUG)
+	e.Logger.SetLevel(log.INFO)
 	echopprof.Wrap(e)
 	e.Use(echotrace.Middleware(echotrace.WithServiceName(splunkServiceName)))
 

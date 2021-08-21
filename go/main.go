@@ -1256,7 +1256,7 @@ func postIsuCondition(c echo.Context) error {
 	}
 	err = tx.GetContext(ctx, &isus, "SELECT `character`, `id` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return c.String(http.StatusNotFound, "not found: isu")
 		}
 		c.Logger().Errorf("db error: %v", err)

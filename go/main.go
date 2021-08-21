@@ -1081,7 +1081,6 @@ func getIsuConditions(c echo.Context) error {
 func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string, endTime time.Time, conditionLevel map[string]interface{}, startTime time.Time,
 	limit int, isuName string) ([]*GetIsuConditionResponse, error) {
 
-	conditions := []IsuCondition{}
 	var err error
 
 	var influxResp *client.Response

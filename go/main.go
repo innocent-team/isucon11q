@@ -752,19 +752,8 @@ func getIsuIcon(c echo.Context) error {
 		}
 	}
 
-	// TODO: 全部ファイルに書き出せたら、DBから返すのをやめる
-	err = db.GetContext(ctx, &image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
-		jiaUserID, jiaIsuUUID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.String(http.StatusNotFound, "not found: isu")
-		}
-
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	return c.Blob(http.StatusOK, "", image)
+	c.Logger().Error("gazou kakidasetenaiyo!!!")
+	return c.NoContent(http.StatusInternalServerError)
 }
 
 // GET /api/isu_icon_for_devonly/:jia_isu_uuid

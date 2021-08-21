@@ -58,6 +58,7 @@ func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, conditi
 var conditionPoints client.BatchPoints
 
 func InsertConditions(jiaIsuUUID string, timestamp time.Time, isSitting bool, scondition string, message string) error {
+	log.Print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	point, err := CreatePoint(jiaIsuUUID, timestamp, isSitting, scondition, message)
 	if err != nil {
 		return fmt.Errorf("Error CreatePoint: %w", err)

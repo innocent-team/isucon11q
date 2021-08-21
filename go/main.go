@@ -1251,8 +1251,8 @@ func postIsuCondition(c echo.Context) error {
 	defer tx.Rollback()
 
 	var isus []struct {
-		Character string `db:"character" json:"character"`
-		ID        int    `db:"id" json:"id"`
+		Character string `db:"character"`
+		ID        int    `db:"id"`
 	}
 	err = tx.GetContext(ctx, &isus, "SELECT `character`, `id` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {

@@ -513,38 +513,30 @@ func getIsuList(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	err = tx.Commit()
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
 
 	responseList := []GetIsuListResponse{}
+	influxConditionsMap, err := getLastCondtionsByIsuList(isuList)
+	if err != nil {
+		c.Logger().Errorf("influx error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	var formattedCondition *GetIsuConditionResponse
 	for _, isu := range isuList {
-		var lastCondition IsuCondition
-		foundLastCondition := true
-		err = tx.GetContext(ctx, &lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
-			isu.JIAIsuUUID)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				foundLastCondition = false
-			} else {
-				c.Logger().Errorf("db error: %v", err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
-		}
-
-		var formattedCondition *GetIsuConditionResponse
-		if foundLastCondition {
-			conditionLevel, err := calculateConditionLevel(lastCondition.Condition)
-			if err != nil {
-				c.Logger().Error(err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
-
+		if condition, ok := influxConditionsMap[isu.JIAIsuUUID]; ok {
 			formattedCondition = &GetIsuConditionResponse{
-				JIAIsuUUID:     lastCondition.JIAIsuUUID,
+				JIAIsuUUID:     condition.JIAIsuUUID,
 				IsuName:        isu.Name,
-				Timestamp:      lastCondition.Timestamp.Unix(),
-				IsSitting:      lastCondition.IsSitting,
-				Condition:      lastCondition.Condition,
-				ConditionLevel: conditionLevel,
-				Message:        lastCondition.Message,
+				Timestamp:      condition.Timestamp.Unix(),
+				IsSitting:      condition.IsSitting,
+				Condition:      condition.Condition,
+				ConditionLevel: condition.ConditionLevel,
+				Message:        condition.Message,
 			}
 		}
 
@@ -556,13 +548,7 @@ func getIsuList(c echo.Context) error {
 			LatestIsuCondition: formattedCondition}
 		responseList = append(responseList, res)
 	}
-
-	err = tx.Commit()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
+	
 	return c.JSON(http.StatusOK, responseList)
 }
 
@@ -888,18 +874,19 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 	}
 	log.Printf("values: %+v", influxResp.Results)
 	if len(influxResp.Results[0].Series) != 0 {
+		m := columnMap(influxResp.Results[0].Series[0].Columns)
 		for _, v := range influxResp.Results[0].Series[0].Values {
 			condition := IsuCondition{}
-			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[rowIndexTimestamp].(string))
+			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[m[fTime]].(string))
 			if err != nil {
 				log.Print(err)
 				continue
 			}
 			condition.Timestamp = timestamp
-			condition.Condition = v[rowIndexCondition].(string)
-			condition.IsSitting = v[rowIndexIsSitting].(bool)
-			condition.JIAIsuUUID = v[rowIndexJIAIsuUUID].(string)
-			condition.Message = v[rowIndexMessage].(string)
+			condition.Condition = v[m[fCondition]].(string)
+			condition.IsSitting = v[m[fIsSitting]].(bool)
+			condition.JIAIsuUUID = v[m[fJIAIsuUUID]].(string)
+			condition.Message = v[m[fMessage]].(string)
 			conditions = append(conditions, condition)
 		}
 	}
@@ -1119,7 +1106,6 @@ func getIsuConditions(c echo.Context) error {
 func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string, endTime time.Time, conditionLevel map[string]interface{}, startTime time.Time,
 	limit int, isuName string) ([]*GetIsuConditionResponse, error) {
 
-	conditions := []IsuCondition{}
 	var err error
 
 	var influxResp *client.Response
@@ -1153,41 +1139,22 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 		return nil, fmt.Errorf("influx error: %v", influxResp.Err)
 	}
 	log.Printf("values: %+v", influxResp.Results)
-	if len(influxResp.Results[0].Series) != 0 {
-		for _, v := range influxResp.Results[0].Series[0].Values {
-			condition := IsuCondition{}
-			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[rowIndexTimestamp].(string))
-			if err != nil {
-				log.Print(err)
-				continue
-			}
-			condition.Timestamp = timestamp
-			condition.Condition = v[rowIndexCondition].(string)
-			condition.IsSitting = v[rowIndexIsSitting].(bool)
-			condition.JIAIsuUUID = v[rowIndexJIAIsuUUID].(string)
-			condition.Message = v[rowIndexMessage].(string)
-			conditions = append(conditions, condition)
-		}
-	}
-
+	influxConditions := ResultInfluxConditons(influxResp.Results[0])
 	conditionsResponse := []*GetIsuConditionResponse{}
-	for _, c := range conditions {
-		cLevel, err := calculateConditionLevel(c.Condition)
-		if err != nil {
-			continue
-		}
-
-		if _, ok := conditionLevel[cLevel]; ok {
-			data := GetIsuConditionResponse{
-				JIAIsuUUID:     c.JIAIsuUUID,
-				IsuName:        isuName,
-				Timestamp:      c.Timestamp.Unix(),
-				IsSitting:      c.IsSitting,
-				Condition:      c.Condition,
-				ConditionLevel: cLevel,
-				Message:        c.Message,
+	if len(influxResp.Results[0].Series) != 0 {
+		for _, condition := range influxConditions  {
+			if _, ok := conditionLevel[condition.ConditionLevel]; ok {
+				data := GetIsuConditionResponse{
+					JIAIsuUUID:     condition.JIAIsuUUID,
+					IsuName:        isuName,
+					Timestamp:      condition.Timestamp.Unix(),
+					IsSitting:      condition.IsSitting,
+					Condition:      condition.Condition,
+					ConditionLevel: condition.ConditionLevel,
+					Message:        condition.Message,
+				}
+				conditionsResponse = append(conditionsResponse, &data)
 			}
-			conditionsResponse = append(conditionsResponse, &data)
 		}
 	}
 

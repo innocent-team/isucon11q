@@ -25,6 +25,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	echopprof "github.com/sevenNt/echo-pprof"
 	sqltrace "github.com/signalfx/signalfx-go-tracing/contrib/database/sql"
 	sqlxtrace "github.com/signalfx/signalfx-go-tracing/contrib/jmoiron/sqlx"
 	echotrace "github.com/signalfx/signalfx-go-tracing/contrib/labstack/echo.v4"
@@ -218,6 +219,7 @@ func main() {
 	e := echo.New()
 	e.Debug = true
 	e.Logger.SetLevel(log.DEBUG)
+	echopprof.Wrap(e)
 	e.Use(echotrace.Middleware(echotrace.WithServiceName(splunkServiceName)))
 
 	e.Use(middleware.Logger())

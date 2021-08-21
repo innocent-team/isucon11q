@@ -1095,14 +1095,21 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 		log.Printf("error: %v", err)
 		log.Printf("influx error: %v", influxResp.Err)
 		log.Printf("values: %+v", influxResp.Results)
-		for _, v := range influxResp.Results[0].Series[0].Values {
-			condition := IsuCondition{}
-			condition.Timestamp = v[0].(time.Time)
-			condition.Condition = v[1].(string)
-			condition.IsSitting = v[3].(bool)
-			condition.JIAIsuUUID = v[4].(string)
-			condition.Message = v[5].(string)
-			conditions = append(conditions, condition)
+		if len(influxResp.Results[0].Series) != 0 {
+			for _, v := range influxResp.Results[0].Series[0].Values {
+				condition := IsuCondition{}
+				timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[0].(string))
+				if err != nil {
+					log.Print(err)
+					continue
+				}
+				condition.Timestamp = timestamp
+				condition.Condition = v[1].(string)
+				condition.IsSitting = v[3].(bool)
+				condition.JIAIsuUUID = v[4].(string)
+				condition.Message = v[5].(string)
+				conditions = append(conditions, condition)
+			}
 		}
 	} else {
 		err = db.SelectContext(ctx, &conditions,

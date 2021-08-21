@@ -26,10 +26,12 @@ query_cache_limit = 1M
 query_cache_size = 32M
 query_cache_type = ON
 
-#slow_query_log = 1
-#slow_query_log_file = /var/log/mysql/mysql-slow.log
-#long_query_time = 0 #slow query time
-#log-queries-not-using-indexes
+### SLOW LOGS
+
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/mysql-slow.log
+long_query_time = 0 #slow query time
+log-queries-not-using-indexes
 
 #### 
 

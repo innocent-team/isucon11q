@@ -550,7 +550,7 @@ func getIsuList(c echo.Context) error {
 	return c.JSON(http.StatusOK, responseList)
 }
 
-const iconDirectory = "/home/isucon/webapp/icon/"
+const iconDirectory = "/tmp/isucon-icon/"
 
 // POST /api/isu
 // ISUを登録

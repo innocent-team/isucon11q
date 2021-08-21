@@ -19,8 +19,8 @@ const (
 	fMessage        = "message"
 	fIsSitting      = "isSitting"
 	fConditionLevel = "conditionLevel"
-	fCharacter = "character"
-	fIsuID = "isuID"
+	fCharacter      = "character"
+	fIsuID          = "isuID"
 )
 
 var influxAddr string
@@ -38,10 +38,10 @@ func InfluxClient() client.Client {
 	return c
 }
 
-func CreatePoint(isuID int,jiaIsuUUID string, timestamp time.Time, isSitting bool, condition string, message string, character string) (*client.Point, error) {
+func CreatePoint(isuID int, jiaIsuUUID string, timestamp time.Time, isSitting bool, condition string, message string, character string) (*client.Point, error) {
 	tags := map[string]string{
 		fJIAIsuUUID: jiaIsuUUID,
-		fCharacter: character,
+		fCharacter:  character,
 	}
 	conditionLevel, err := calculateConditionLevel(condition)
 	if err != nil {
@@ -52,7 +52,7 @@ func CreatePoint(isuID int,jiaIsuUUID string, timestamp time.Time, isSitting boo
 		fCondition:      condition,
 		fMessage:        message,
 		fConditionLevel: conditionLevel,
-		fIsuID: isuID,
+		fIsuID:          isuID,
 	}
 	point, err := client.NewPoint("condition", tags, fields, timestamp)
 	if err != nil {
@@ -201,15 +201,15 @@ func getLastCondtionsByIsuList(isuList []Isu) (map[string]InfluxCondition, error
 
 func getTrendByCharacterType(character string) (TrendResponse, error) {
 	res := TrendResponse{
-				Character: character,
-				Info:      []*TrendCondition{},
-				Warning:   []*TrendCondition{},
-				Critical:  []*TrendCondition{},
-			}
+		Character: character,
+		Info:      []*TrendCondition{},
+		Warning:   []*TrendCondition{},
+		Critical:  []*TrendCondition{},
+	}
 	c := InfluxClient()
 	defer c.Close()
 
-	q := client.NewQueryWithParameters(`SELECT last(*) FROM condition WHERE character = $character GROUP BY jiaIsuUUID ORDER BY time DESC` , "isu", "", client.Params{
+	q := client.NewQueryWithParameters(`SELECT last(*) FROM condition WHERE character = $character GROUP BY jiaIsuUUID ORDER BY time DESC`, "isu", "", client.Params{
 		"character": character,
 	})
 	resp, err := c.Query(q)
@@ -219,32 +219,34 @@ func getTrendByCharacterType(character string) (TrendResponse, error) {
 	if resp.Err != "" {
 		return res, err
 	}
+	log.Print(resp)
 	for _, row := range resp.Results[0].Series {
 		m := columnMap(row.Columns)
-		for _, v :=  range row.Values {
+		for _, v := range row.Values {
 			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[m["time"]].(string))
+			log.Print(timestamp)
 			if err != nil {
 				log.Printf("error: timestamp  %v", err)
 				continue
 			}
-			id, err :=  v[m["last_isuID"]].(json.Number).Int64()
+			id, err := v[m["last_isuID"]].(json.Number).Int64()
 			if err != nil {
 				log.Printf("error: number  %v", err)
 				continue
 			}
-			level :=  v[m["last_conditionLevel"]].(string)
+			level := v[m["last_conditionLevel"]].(string)
 			cond := &TrendCondition{
-				ID: int(id),
+				ID:        int(id),
 				Timestamp: timestamp.Unix(),
 			}
 			fmt.Printf("Type: %s\n", level)
 			switch level {
-				case "info":
-					res.Info = append(res.Info, cond)
-				case "warning":
-					res.Warning = append(res.Warning, cond)
-				case "critical":
-					res.Critical = append(res.Critical, cond)
+			case "info":
+				res.Info = append(res.Info, cond)
+			case "warning":
+				res.Warning = append(res.Warning, cond)
+			case "critical":
+				res.Critical = append(res.Critical, cond)
 			}
 		}
 	}

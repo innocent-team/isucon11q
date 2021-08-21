@@ -7,6 +7,17 @@ cd $(dirname $0)
 # 3 -> ip-192-168-0-13
 echo $HOSTNAME
 
+if [[ "$HOSTNAME" == ip-192-168-0-11 ]]; then
+  INSTANCE_NUM="1"
+elif [[ "$HOSTNAME" == ip-192-168-0-12 ]]; then
+  INSTANCE_NUM="2"
+elif [[ "$HOSTNAME" == ip-192-168-0-13 ]]; then
+  INSTANCE_NUM="3"
+else
+  echo "Invalid host"
+  exit 1
+fi
+
 set -ex
 
 sudo systemctl daemon-reload
@@ -23,7 +34,13 @@ sudo cp -a ./conf/all/etc/nginx/sites-available/isucondition.conf /etc/nginx/sit
 sudo nginx -t &&  sudo systemctl restart nginx
 
 echo "Restarting mysql"
-sudo cp -a ./conf/etc/mysql/conf.d/my.cnf /etc/mysql/conf.d/my.cnf
-sudo cp -a ./conf/etc/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
-sudo cp -a ./conf/etc/mysql/conf.d/mysqldump.cnf /etc/mysql/conf.d/mysqldump.cnf
+sudo cp -a ./conf/all/etc/mysql/conf.d/my.cnf /etc/mysql/conf.d/my.cnf
+sudo cp -a ./conf/all/etc/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
+sudo cp -a ./conf/all/etc/mysql/conf.d/mysqldump.cnf /etc/mysql/conf.d/mysqldump.cnf
 sudo systemctl restart mysqld
+
+if [[ "$INSTANCE_NUM" == 3 ]]; then
+  echo "Restarting influxdb"
+  sudo cp -a ./conf/$INSTANCE_NUM/etc/influxdb/influxdb.conf /etc/influxdb/influxdb.conf
+  sudo systemctl restart influxdb
+fi

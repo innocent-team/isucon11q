@@ -7,7 +7,7 @@ import (
 	client "github.com/influxdata/influxdb1-client/v2"
 )
 
-const INFLUX_WRITE_SPAN = 1000 * time.Millisecond
+const INFLUX_WRITE_SPAN = 500 * time.Millisecond
 var influxAddr string
 
 func InfluxClient() client.Client {

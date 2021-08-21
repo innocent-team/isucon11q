@@ -1333,12 +1333,7 @@ func postIsuCondition(c echo.Context) error {
 		}
 
 		// influxdb あとでgo-routingにする。
-<<<<<<< HEAD
-		err = InsertConditions(jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
-		log.Print("!!!!!!!!!!!!!INSERT to influxdb OK")
-=======
 		err = InsertConditions(jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, character)
->>>>>>> cd715b2 (add character)
 
 		if err != nil {
 			c.Logger().Errorf("influx error: %v", err)

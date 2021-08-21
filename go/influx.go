@@ -221,7 +221,6 @@ func getTrendByCharacterType(character string) (TrendResponse, error) {
 	}
 	for _, row := range resp.Results[0].Series {
 		m := columnMap(row.Columns)
-		fmt.Printf("RES %v\n", row)
 		for _, v :=  range row.Values {
 			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[m["time"]].(string))
 			if err != nil {

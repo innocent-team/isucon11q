@@ -37,9 +37,9 @@ sudo nginx -t &&  sudo systemctl restart nginx
 
 if [[ "$INSTANCE_NUM" == 2 ]]; then
   echo "Restarting mysql"
-  sudo cp -a ./conf/all/etc/mysql/conf.d/my.cnf /etc/mysql/conf.d/my.cnf
-  sudo cp -a ./conf/all/etc/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
-  sudo cp -a ./conf/all/etc/mysql/conf.d/mysqldump.cnf /etc/mysql/conf.d/mysqldump.cnf
+  sudo cp -a ./conf/$INSTANCE_NUM/etc/mysql/conf.d/my.cnf /etc/mysql/conf.d/my.cnf
+  sudo cp -a ./conf/$INSTANCE_NUM/etc/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
+  sudo cp -a ./conf/$INSTANCE_NUM/etc/mysql/conf.d/mysqldump.cnf /etc/mysql/conf.d/mysqldump.cnf
   # sudo systemctl enable mysql
   sudo systemctl restart mysql
 fi

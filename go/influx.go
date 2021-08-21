@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ const (
 	fIsSitting      = "isSitting"
 	fConditionLevel = "conditionLevel"
 	fCharacter = "character"
+	fIsuID = "isuID"
 )
 
 var influxAddr string
@@ -36,7 +38,7 @@ func InfluxClient() client.Client {
 	return c
 }
 
-func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, condition string, message string, character string) (*client.Point, error) {
+func CreatePoint(isuID int,jiaIsuUUID string, timestamp time.Time, isSitting bool, condition string, message string, character string) (*client.Point, error) {
 	tags := map[string]string{
 		fJIAIsuUUID: jiaIsuUUID,
 		fCharacter: character,
@@ -50,6 +52,7 @@ func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, conditi
 		fCondition:      condition,
 		fMessage:        message,
 		fConditionLevel: conditionLevel,
+		fIsuID: isuID,
 	}
 	point, err := client.NewPoint("condition", tags, fields, timestamp)
 	if err != nil {
@@ -60,8 +63,8 @@ func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, conditi
 
 var conditionPoints client.BatchPoints
 
-func InsertConditions(jiaIsuUUID string, timestamp time.Time, isSitting bool, scondition string, message string, character string) error {
-	point, err := CreatePoint(jiaIsuUUID, timestamp, isSitting, scondition, message, character)
+func InsertConditions(isuID int, jiaIsuUUID string, timestamp time.Time, isSitting bool, scondition string, message string, character string) error {
+	point, err := CreatePoint(isuID, jiaIsuUUID, timestamp, isSitting, scondition, message, character)
 	if err != nil {
 		return fmt.Errorf("Error CreatePoint: %w", err)
 	}
@@ -194,4 +197,56 @@ func getLastCondtionsByIsuList(isuList []Isu) (map[string]InfluxCondition, error
 		}
 	}
 	return influxConditionsMap, nil
+}
+
+func getTrendByCharacterType(character string) (TrendResponse, error) {
+	res := TrendResponse{
+				Character: character,
+				Info:      []*TrendCondition{},
+				Warning:   []*TrendCondition{},
+				Critical:  []*TrendCondition{},
+			}
+	c := InfluxClient()
+	defer c.Close()
+
+	q := client.NewQueryWithParameters(`SELECT last(*) FROM condition WHERE character = $character GROUP BY jiaIsuUUID ORDER BY time DESC` , "isu", "", client.Params{
+		"character": character,
+	})
+	resp, err := c.Query(q)
+	if err != nil {
+		return res, err
+	}
+	if resp.Err != "" {
+		return res, err
+	}
+	for _, row := range resp.Results[0].Series {
+		m := columnMap(row.Columns)
+		for _, v :=  range row.Values {
+			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[m["time"]].(string))
+			if err != nil {
+				log.Printf("error: timestamp  %v", err)
+				continue
+			}
+			id, err :=  v[m["last_isuID"]].(json.Number).Int64()
+			if err != nil {
+				log.Printf("error: number  %v", err)
+				continue
+			}
+			level :=  v[m["last_conditionLevel"]].(string)
+			cond := &TrendCondition{
+				ID: int(id),
+				Timestamp: timestamp.Unix(),
+			}
+			fmt.Printf("Type: %s\n", level)
+			switch level {
+				case "info":
+					res.Info = append(res.Info, cond)
+				case "warning":
+					res.Warning = append(res.Warning, cond)
+				case "critical":
+					res.Critical = append(res.Critical, cond)
+			}
+		}
+	}
+	return res, nil
 }

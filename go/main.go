@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -359,7 +358,7 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	for _, cond := range initialConditions {
-		point, err := CreatePoint(cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.Character)
+		point, err := CreatePoint(cond.ID, cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.Character)
 		if err != nil {
 			return fmt.Errorf("Error CreatePoint: %w", err)
 		}
@@ -1201,69 +1200,12 @@ func getTrend(c echo.Context) error {
 	res := []TrendResponse{}
 
 	for _, character := range characterList {
-		isuList := []Isu{}
-		err = db.SelectContext(ctx, &isuList,
-			"SELECT * FROM `isu` WHERE `character` = ?",
-			character.Character,
-		)
+		resp, err := getTrendByCharacterType(character.Character)
 		if err != nil {
-			c.Logger().Errorf("db error: %v", err)
+			c.Logger().Errorf("influx error: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
-
-		characterInfoIsuConditions := []*TrendCondition{}
-		characterWarningIsuConditions := []*TrendCondition{}
-		characterCriticalIsuConditions := []*TrendCondition{}
-		for _, isu := range isuList {
-			conditions := []IsuCondition{}
-			err = db.SelectContext(ctx, &conditions,
-				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC",
-				isu.JIAIsuUUID,
-			)
-			if err != nil {
-				c.Logger().Errorf("db error: %v", err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
-
-			if len(conditions) > 0 {
-				isuLastCondition := conditions[0]
-				conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
-				if err != nil {
-					c.Logger().Error(err)
-					return c.NoContent(http.StatusInternalServerError)
-				}
-				trendCondition := TrendCondition{
-					ID:        isu.ID,
-					Timestamp: isuLastCondition.Timestamp.Unix(),
-				}
-				switch conditionLevel {
-				case "info":
-					characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
-				case "warning":
-					characterWarningIsuConditions = append(characterWarningIsuConditions, &trendCondition)
-				case "critical":
-					characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
-				}
-			}
-
-		}
-
-		sort.Slice(characterInfoIsuConditions, func(i, j int) bool {
-			return characterInfoIsuConditions[i].Timestamp > characterInfoIsuConditions[j].Timestamp
-		})
-		sort.Slice(characterWarningIsuConditions, func(i, j int) bool {
-			return characterWarningIsuConditions[i].Timestamp > characterWarningIsuConditions[j].Timestamp
-		})
-		sort.Slice(characterCriticalIsuConditions, func(i, j int) bool {
-			return characterCriticalIsuConditions[i].Timestamp > characterCriticalIsuConditions[j].Timestamp
-		})
-		res = append(res,
-			TrendResponse{
-				Character: character.Character,
-				Info:      characterInfoIsuConditions,
-				Warning:   characterWarningIsuConditions,
-				Critical:  characterCriticalIsuConditions,
-			})
+		res = append(res, resp)
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -1302,8 +1244,11 @@ func postIsuCondition(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	var character string
-	err = tx.GetContext(ctx, &character, "SELECT `character` FROM `isu` WHERE `jia_isu_uuid` = ? LIMIT 1", jiaIsuUUID)
+	var isus []struct {
+		Character string `json:"character"`
+		ID int `json:"id"`
+	}
+	err = tx.GetContext(ctx, &isus, "SELECT `character`, `id` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.String(http.StatusNotFound, "not found: isu")
@@ -1312,6 +1257,11 @@ func postIsuCondition(c echo.Context) error {
 		log.Print("!!!!!!!!!!!!!SELECT COUNT(*) FROM `isu` SERVER ERROR!!!!!!!!!!!!!!!!!!!!!!!!")
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	if len(isus) == 0 {
+		return c.String(http.StatusNotFound, "not found: isu")
+	}
+	character := isus[0].Character
+	isuID := isus[0].ID
 
 	for _, cond := range req {
 		timestamp := time.Unix(cond.Timestamp, 0)
@@ -1333,7 +1283,7 @@ func postIsuCondition(c echo.Context) error {
 		}
 
 		// influxdb あとでgo-routingにする。
-		err = InsertConditions(jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, character)
+		err = InsertConditions(isuID, jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, character)
 
 		if err != nil {
 			c.Logger().Errorf("influx error: %v", err)

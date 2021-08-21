@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -252,5 +253,15 @@ func getTrendByCharacterType(character string) (TrendResponse, error) {
 			}
 		}
 	}
+	sort.Slice(res.Info, func(i, j int) bool {
+		return res.Info[i].Timestamp > res.Info[j].Timestamp
+	})
+	sort.Slice(res.Warning, func(i, j int) bool {
+		return res.Warning[i].Timestamp > res.Warning[j].Timestamp
+	})
+	sort.Slice(res.Critical, func(i, j int) bool {
+		return res.Critical[i].Timestamp > res.Critical[j].Timestamp
+	})
+
 	return res, nil
 }

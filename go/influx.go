@@ -211,7 +211,7 @@ func getTrendByCharacterType(character string) (TrendResponse, error) {
 	c := InfluxClient()
 	defer c.Close()
 
-	q := client.NewQueryWithParameters(`SELECT last(*) FROM condition WHERE character = $character GROUP BY jiaIsuUUID ORDER BY unixtime ASC`, "isu", "", client.Params{
+	q := client.NewQueryWithParameters(`SELECT last(*) FROM condition WHERE character = $character GROUP BY jiaIsuUUID ORDER BY time ASC`, "isu", "", client.Params{
 		"character": character,
 	})
 	resp, err := c.Query(q)

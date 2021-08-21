@@ -12,11 +12,11 @@ import (
 const INFLUX_WRITE_SPAN = 500 * time.Millisecond
 
 const (
-	fTime = "time"
-	fJIAIsuUUID = "jiaIsuUUID"
-	fCondition = "condition"
-	fMessage = "message"
-	fIsSitting = "isSitting"
+	fTime           = "time"
+	fJIAIsuUUID     = "jiaIsuUUID"
+	fCondition      = "condition"
+	fMessage        = "message"
+	fIsSitting      = "isSitting"
 	fConditionLevel = "conditionLevel"
 )
 
@@ -110,11 +110,11 @@ func PrintInfluxdb() {
 }
 
 type InfluxCondition struct {
-	Timestamp time.Time
-	Condition string
-	IsSitting bool
-	JIAIsuUUID string
-	Message string
+	Timestamp      time.Time
+	Condition      string
+	IsSitting      bool
+	JIAIsuUUID     string
+	Message        string
 	ConditionLevel string
 }
 
@@ -130,13 +130,13 @@ func ResultInfluxConditons(result client.Result) []InfluxCondition {
 			log.Printf("error: timestamp  %v", err)
 			continue
 		}
-		condition := InfluxCondition {
-			Timestamp: timestamp,
-			Condition: v[m[fCondition]].(string),
+		condition := InfluxCondition{
+			Timestamp:      timestamp,
+			Condition:      v[m[fCondition]].(string),
 			ConditionLevel: v[m[fConditionLevel]].(string),
-			IsSitting: v[m[fIsSitting]].(bool),
-			JIAIsuUUID: v[m[fJIAIsuUUID]].(string),
-			Message: v[m[fMessage]].(string),
+			IsSitting:      v[m[fIsSitting]].(bool),
+			JIAIsuUUID:     v[m[fJIAIsuUUID]].(string),
+			Message:        v[m[fMessage]].(string),
 		}
 
 		res = append(res, condition)
@@ -154,11 +154,11 @@ func columnMap(columns []string) map[string]int {
 
 func getLastCondtionsByIsuList(isuList []Isu) (map[string]InfluxCondition, error) {
 	var builder strings.Builder
-    for _, id := range isuList {
+	for _, id := range isuList {
 		builder.WriteString(`SELECT last(*) FROM "condition" WHERE "jiaIsuUUID" = '`)
 		builder.WriteString(id.JIAIsuUUID)
-		builder.WriteString(`ORDER BY "time" DESC; `)
-    }
+		builder.WriteString(`' ORDER BY "time" DESC; `)
+	}
 	q := client.NewQueryWithParameters(builder.String(), "isu", "", client.Params{})
 	c := InfluxClient()
 	result, err := c.Query(q)
@@ -176,14 +176,14 @@ func getLastCondtionsByIsuList(isuList []Isu) (map[string]InfluxCondition, error
 				log.Printf("error: timestamp  %v", err)
 				continue
 			}
-			id :=v[m[fJIAIsuUUID]].(string)
-			condition := InfluxCondition {
-				Timestamp: timestamp,
-				Condition: v[m[fCondition]].(string),
+			id := v[m[fJIAIsuUUID]].(string)
+			condition := InfluxCondition{
+				Timestamp:      timestamp,
+				Condition:      v[m[fCondition]].(string),
 				ConditionLevel: v[m[fConditionLevel]].(string),
-				IsSitting: v[m[fIsSitting]].(bool),
-				JIAIsuUUID: id,
-				Message: v[m[fMessage]].(string),
+				IsSitting:      v[m[fIsSitting]].(bool),
+				JIAIsuUUID:     id,
+				Message:        v[m[fMessage]].(string),
 			}
 			influxConditionsMap[id] = condition
 		}

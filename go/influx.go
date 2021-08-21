@@ -155,9 +155,9 @@ func columnMap(columns []string) map[string]int {
 func getLastCondtionsByIsuList(isuList []Isu) (map[string]InfluxCondition, error) {
 	var builder strings.Builder
 	for _, id := range isuList {
-		builder.WriteString(`SELECT last(*) FROM "condition" WHERE "jiaIsuUUID" = '`)
+		builder.WriteString(`SELECT * FROM "condition" WHERE "jiaIsuUUID" = '`)
 		builder.WriteString(id.JIAIsuUUID)
-		builder.WriteString(`' ORDER BY "time" DESC; `)
+		builder.WriteString(`' ORDER BY "time" DESC LIMIT 1; `)
 	}
 	q := client.NewQueryWithParameters(builder.String(), "isu", "", client.Params{})
 	c := InfluxClient()
@@ -177,6 +177,7 @@ func getLastCondtionsByIsuList(isuList []Isu) (map[string]InfluxCondition, error
 				continue
 			}
 			id := v[m[fJIAIsuUUID]].(string)
+			log.Printf("!!!!!!!!!!!!!!!%#v", res)
 			condition := InfluxCondition{
 				Timestamp:      timestamp,
 				Condition:      v[m[fCondition]].(string),

@@ -8,6 +8,7 @@ import (
 )
 
 const INFLUX_WRITE_SPAN = 500 * time.Millisecond
+
 var influxAddr string
 
 func InfluxClient() client.Client {
@@ -32,9 +33,9 @@ func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, conditi
 		return nil, fmt.Errorf("Error condition level: %w", err)
 	}
 	fields := map[string]interface{}{
-		"isSitting": isSitting,
-		"condition": condition,
-		"message": message,
+		"isSitting":      isSitting,
+		"condition":      condition,
+		"message":        message,
 		"conditionLevel": conditionLevel,
 	}
 	point, err := client.NewPoint("condition", tags, fields, timestamp)
@@ -52,6 +53,7 @@ func InsertConditions(jiaIsuUUID string, timestamp time.Time, isSitting bool, sc
 		return fmt.Errorf("Error CreatePoint: %w", err)
 	}
 	conditionPoints.AddPoint(point)
+	WriteCondition()
 	return nil
 }
 
@@ -76,7 +78,7 @@ func WriteCondition() {
 
 func StartInfluxCondition() {
 	WriteCondition()
-	go func(){
+	go func() {
 		for {
 			WriteCondition()
 			time.Sleep(INFLUX_WRITE_SPAN)

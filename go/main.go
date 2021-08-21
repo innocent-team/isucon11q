@@ -355,8 +355,13 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	for _, cond := range initialConditions {
-		InsertConditions(cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message)
+		point, err := CreatePoint(cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message)
+		if err != nil {
+			return fmt.Errorf("Error CreatePoint: %w", err)
+		}
+		conditionPoints.AddPoint(point)
 	}
+	WriteCondition()
 
 	_, err = db.ExecContext(ctx,
 		"INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)",

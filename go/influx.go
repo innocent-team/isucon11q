@@ -169,6 +169,9 @@ func getLastCondtionsByIsuList(isuList []Isu) (map[string]InfluxCondition, error
 
 	influxConditionsMap := map[string]InfluxCondition{}
 	for _, res := range result.Results {
+		if len(res.Series) == 0 {
+			continue
+		}
 		row := res.Series[0]
 		m := columnMap(row.Columns)
 		for _, v := range row.Values {

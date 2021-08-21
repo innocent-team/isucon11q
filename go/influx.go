@@ -23,9 +23,10 @@ func InfluxClient() client.Client {
 	return c
 }
 
-func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, condition string, message string) (*client.Point, error) {
+func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, condition string, message string, character string) (*client.Point, error) {
 	tags := map[string]string{
 		"jiaIsuUUID": jiaIsuUUID,
+		"character": character,
 	}
 	conditionLevel, err := calculateConditionLevel(condition)
 	if err != nil {
@@ -46,8 +47,8 @@ func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, conditi
 
 var conditionPoints client.BatchPoints
 
-func InsertConditions(jiaIsuUUID string, timestamp time.Time, isSitting bool, scondition string, message string) error {
-	point, err := CreatePoint(jiaIsuUUID, timestamp, isSitting, scondition, message)
+func InsertConditions(jiaIsuUUID string, timestamp time.Time, isSitting bool, scondition string, message string, character string) error {
+	point, err := CreatePoint(jiaIsuUUID, timestamp, isSitting, scondition, message, character)
 	if err != nil {
 		return fmt.Errorf("Error CreatePoint: %w", err)
 	}

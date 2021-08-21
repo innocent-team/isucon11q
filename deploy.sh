@@ -12,7 +12,10 @@ set -ex
 sudo systemctl daemon-reload
 
 echo "Restarting App"
+pushd go
+go build
 sudo systemctl restart isucondition.go.service
+popd
 
 echo "Restarting nginx"
 sudo cp -a ./conf/all/etc/nginx/nginx.conf /etc/nginx/nginx.conf

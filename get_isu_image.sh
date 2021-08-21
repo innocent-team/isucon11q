@@ -12,6 +12,7 @@ export LANG="C.UTF-8"
 
 if [[ ! -f /tmp/isucon-icon/completed ]]; then
   mkdir -p /tmp/isucon-icon
+  chmod 777 /tmp/isucon-icon
   cd /tmp/isucon-icon
   echo "SELECT CONCAT('http://localhost:3000/api/icon_for_devonly/', jia_isu_uuid) FROM isu" |  mysql --defaults-file=/dev/null -N -B -h $MYSQL_HOST -P $MYSQL_PORT -u $MYSQL_USER -p$MYSQL_PWD $MYSQL_DBNAME | xargs wget
   touch /tmp/isucon-icon/completed

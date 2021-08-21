@@ -52,5 +52,5 @@ if [[ "$INSTANCE_NUM" == 3 ]]; then
   sudo cp -a ./conf/all/etc/nginx/nginx.conf /etc/nginx/nginx.conf
   sudo cp -a ./conf/all/etc/nginx/sites-available/isucondition.conf /etc/nginx/sites-available/isucondition.conf
   sudo systemctl enable nginx
-  sudo nginx -t &&  sudo systemctl restart nginx
+  sudo /opt/sbin/nginx -c /etc/nginx/nginx.conf -t &&  sudo systemctl restart nginx
 fi

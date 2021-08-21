@@ -1265,6 +1265,7 @@ func postIsuCondition(c echo.Context) error {
 		c.Logger().Warnf("drop post isu condition request")
 		return c.NoContent(http.StatusAccepted)
 	}
+	log.Print("!!!!!!!!!!!!!post isu condition request ok")
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 	if jiaIsuUUID == "" {
@@ -1278,6 +1279,7 @@ func postIsuCondition(c echo.Context) error {
 	} else if len(req) == 0 {
 		return c.String(http.StatusBadRequest, "bad request body")
 	}
+	log.Print("!!!!!!!!!!!!!request body ok")
 
 	tx, err := db.Beginx()
 	if err != nil {
@@ -1287,6 +1289,7 @@ func postIsuCondition(c echo.Context) error {
 	defer tx.Rollback()
 
 	var count int
+	log.Print("!!!!!!!!!!!!!SELECT COUNT(*) FROM `isu`")
 	err = tx.GetContext(ctx, &count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
@@ -1303,6 +1306,7 @@ func postIsuCondition(c echo.Context) error {
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
 
+		log.Print("!!!!!!!!!!!!!INSERT INTO `isu_condition`")
 		_, err = tx.ExecContext(ctx,
 			"INSERT INTO `isu_condition`"+
 				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
@@ -1316,6 +1320,7 @@ func postIsuCondition(c echo.Context) error {
 
 		// influxdb あとでgo-routingにする。
 		err = InsertConditions(jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
+		log.Print("!!!!!!!!!!!!!INSERT to influxdb OK")
 
 		if err != nil {
 			c.Logger().Errorf("influx error: %v", err)
@@ -1328,6 +1333,8 @@ func postIsuCondition(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	log.Print("!!!!!!!!!!!!!everything is ok")
 
 	return c.NoContent(http.StatusAccepted)
 }

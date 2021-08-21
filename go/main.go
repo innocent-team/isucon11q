@@ -601,11 +601,10 @@ func postIsu(c echo.Context) error {
 		c.Logger().Errorf("failed to upload file: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	// TODO: `image` カラムはNULLのままにする
 
 	_, err = tx.ExecContext(ctx, "INSERT INTO `isu`"+
-		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)",
-		jiaIsuUUID, isuName, image, jiaUserID)
+		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, NULL, ?)",
+		jiaIsuUUID, isuName, jiaUserID)
 	if err != nil {
 		mysqlErr, ok := err.(*mysql.MySQLError)
 

@@ -104,3 +104,34 @@ func PrintInfluxdb() {
 		fmt.Printf("%#+v\n", response.Results)
 	}
 }
+
+type InfluxCondition struct {
+	Timestamp time.Time
+	Condition string
+	IsSitting bool
+	JIAIsuUUID string
+	Message string
+	ConditionLevel string
+}
+
+func ResultInfluxConditons(result client.Result) []InfluxCondition {
+	res := []InfluxCondition{}
+	for _, v := range result.Series[0].Values {
+		timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[rowIndexTimestamp].(string))
+		if err != nil {
+			log.Print("error: timestamp  %v", err)
+			continue
+		}
+		condition := InfluxCondition {
+			Timestamp: timestamp,
+			Condition: v[rowIndexCondition].(string),
+			ConditionLevel: v[rowIndexConditionLevel].(string),
+			IsSitting: v[rowIndexIsSitting].(bool),
+			JIAIsuUUID: v[rowIndexJIAIsuUUID].(string),
+			Message: v[rowIndexMessage].(string),
+		}
+
+		res = append(res, condition)
+	}
+	return res
+}

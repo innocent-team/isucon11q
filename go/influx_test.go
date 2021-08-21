@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing" // テストで使える関数・構造体が用意されているパッケージをimport
 	"time"
 

@@ -538,6 +538,8 @@ func getIsuList(c echo.Context) error {
 	return c.JSON(http.StatusOK, responseList)
 }
 
+const iconDirectory = "/home/isucon/webapp/icon/"
+
 // POST /api/isu
 // ISUを登録
 func postIsu(c echo.Context) error {
@@ -593,6 +595,12 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
+	err = ioutil.WriteFile(iconDirectory+jiaIsuUUID, image, 0777)
+	if err != nil {
+		c.Logger().Errorf("failed to upload file: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	// TODO: `image` カラムはNULLのままにする
 
 	_, err = tx.ExecContext(ctx, "INSERT INTO `isu`"+
 		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)",

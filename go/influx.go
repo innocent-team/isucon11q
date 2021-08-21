@@ -92,6 +92,6 @@ func PrintInfluxdb() {
 
 	q := client.NewQuery("SELECT * FROM condition", "isu", "")
 	if response, err := c.Query(q); err == nil && response.Error() == nil {
-		fmt.Println(response.Results)
+		fmt.Printf("%#+v\n", response.Results)
 	}
 }

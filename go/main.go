@@ -349,8 +349,14 @@ func postInitialize(c echo.Context) error {
 	}
 
 	var initialConditions []struct {
-		IsuCondition
-		Character string `db:"character"`
+		ID         int       `db:"id"`
+		JIAIsuUUID string    `db:"jia_isu_uuid"`
+		Timestamp  time.Time `db:"timestamp"`
+		IsSitting  bool      `db:"is_sitting"`
+		Condition  string    `db:"condition"`
+		Message    string    `db:"message"`
+		CreatedAt  time.Time `db:"created_at"`
+		Character  string    `db:"character"`
 	}
 	err = db.SelectContext(ctx, &initialConditions, "SELECT ic.*, i.character FROM `isu_condition` ic INNER JOIN isu i ON i.jia_isu_uuid = ic.jia_isu_uuid")
 	if err != nil {
@@ -1246,7 +1252,7 @@ func postIsuCondition(c echo.Context) error {
 
 	var isus []struct {
 		Character string `json:"character"`
-		ID int `json:"id"`
+		ID        int    `json:"id"`
 	}
 	err = tx.GetContext(ctx, &isus, "SELECT `character`, `id` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {

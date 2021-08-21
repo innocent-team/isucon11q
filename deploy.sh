@@ -40,6 +40,7 @@ if [[ "$INSTANCE_NUM" == 2 ]]; then
   sudo cp -a ./conf/$INSTANCE_NUM/etc/mysql/conf.d/my.cnf /etc/mysql/conf.d/my.cnf
   sudo cp -a ./conf/$INSTANCE_NUM/etc/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
   sudo cp -a ./conf/$INSTANCE_NUM/etc/mysql/conf.d/mysqldump.cnf /etc/mysql/conf.d/mysqldump.cnf
+  sudo cp -a ./conf/$INSTANCE_NUM/etc/mysql/mariadb.conf.d/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
   # sudo systemctl enable mysql
   sudo systemctl restart mysql
 fi

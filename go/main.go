@@ -718,43 +718,43 @@ func getIsuID(c echo.Context) error {
 // ISUのアイコンを取得
 func getIsuIcon(c echo.Context) error {
 	ctx := c.Request().Context()
-	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
-	if err != nil {
-		if errStatusCode == http.StatusUnauthorized {
-			return c.String(http.StatusUnauthorized, "you are not signed in")
-		}
+	// jiaUserID, errStatusCode, err := getUserIDFromSession(c)
+	// if err != nil {
+	// 	if errStatusCode == http.StatusUnauthorized {
+	// 		return c.String(http.StatusUnauthorized, "you are not signed in")
+	// 	}
 
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	// 	c.Logger().Error(err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 
-	var isu Isu
-	err = db.GetContext(ctx, &isu, "SELECT `jia_isu_uuid` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?", jiaUserID, jiaIsuUUID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.String(http.StatusNotFound, "not found: isu")
-		}
+	// var isu Isu
+	// err = db.GetContext(ctx, &isu, "SELECT `jia_isu_uuid` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?", jiaUserID, jiaIsuUUID)
+	// if err != nil {
+	// 	if errors.Is(err, sql.ErrNoRows) {
+	// 		return c.String(http.StatusNotFound, "not found: isu")
+	// 	}
 
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
 
 	var image []byte
-	image, err = ioutil.ReadFile(iconDirectory + jiaIsuUUID)
-	if err == nil {
-		return c.Blob(http.StatusOK, "", image)
-	} else {
-		if !os.IsNotExist(err) {
-			c.Logger().Errorf("failed to read icon file: %v", err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
-	}
+	// image, err = ioutil.ReadFile(iconDirectory + jiaIsuUUID)
+	// if err == nil {
+	// 	return c.Blob(http.StatusOK, "", image)
+	// } else {
+	// 	if !os.IsNotExist(err) {
+	// 		c.Logger().Errorf("failed to read icon file: %v", err)
+	// 		return c.NoContent(http.StatusInternalServerError)
+	// 	}
+	// }
 
 	// TODO: 全部ファイルに書き出せたら、DBから返すのをやめる
-	err = db.GetContext(ctx, &image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
-		jiaUserID, jiaIsuUUID)
+	err := db.GetContext(ctx, &image, "SELECT `image` FROM `isu` WHERE `jia_isu_uuid` = ?",
+		jiaIsuUUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return c.String(http.StatusNotFound, "not found: isu")

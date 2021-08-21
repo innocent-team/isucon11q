@@ -1094,12 +1094,15 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 		influxResp, err = c.Query(query)
 		log.Printf("error: %v", influxResp.Err)
 		log.Printf("values: %+v", influxResp.Results[0].Series[0].Values)
-		err = db.SelectContext(ctx, &conditions,
-			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
-				"	AND `timestamp` < ?"+
-				"	ORDER BY `timestamp` DESC",
-			jiaIsuUUID, endTime,
-		)
+		for _, v := range influxResp.Results[0].Series[0].Values {
+			condition := IsuCondition{}
+			condition.Timestamp = v[0].(time.Time)
+			condition.Condition = v[1].(string)
+			condition.IsSitting = v[3].(bool)
+			condition.JIAIsuUUID = v[4].(string)
+			condition.Message = v[5].(string)
+			conditions = append(conditions, condition)
+		}
 	} else {
 		err = db.SelectContext(ctx, &conditions,
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+

@@ -348,6 +348,16 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	var initialConditions []IsuCondition
+	err = db.SelectContext(ctx, &initialConditions, "SELECT * FROM `isu_condition`")
+	if err != nil {
+		c.Logger().Errorf("select initial conditions error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	for _, cond := range initialConditions {
+		InsertConditions(cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message)
+	}
+
 	_, err = db.ExecContext(ctx,
 		"INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)",
 		"jia_service_url",

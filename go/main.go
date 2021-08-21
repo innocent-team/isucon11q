@@ -230,7 +230,7 @@ func main() {
 	e.POST("/api/auth", postAuthentication)
 	e.POST("/api/signout", postSignout)
 	e.GET("/api/user/me", getMe)
-	e.GET("/api/isu_icon_for_devonly/:jia_isu_uuid", getIsuIconDevonly)
+	e.GET("/api/icon_for_devonly/:jia_isu_uuid", getIsuIconDevonly)
 	e.GET("/api/isu", getIsuList)
 	e.POST("/api/isu", postIsu)
 	e.GET("/api/isu/:jia_isu_uuid", getIsuID)

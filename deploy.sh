@@ -2,6 +2,9 @@
 
 cd $(dirname $0)
 
+# 1 -> ip-192-168-0-11
+# 2 -> ip-192-168-0-12
+# 3 -> ip-192-168-0-13
 echo $HOSTNAME
 
 set -ex

@@ -9,6 +9,15 @@ import (
 
 const INFLUX_WRITE_SPAN = 500 * time.Millisecond
 
+const (
+	rowIndexTimestamp      = 0
+	rowIndexCondition      = 1
+	rowIndexConditionLevel = 2
+	rowIndexIsSitting      = 3
+	rowIndexJIAIsuUUID     = 4
+	rowIndexMessage        = 5
+)
+
 var influxAddr string
 
 func InfluxClient() client.Client {

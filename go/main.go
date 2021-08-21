@@ -1119,17 +1119,17 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 	if len(influxResp.Results[0].Series) != 0 {
 		for _, v := range influxResp.Results[0].Series[0].Values {
 			condition := IsuCondition{}
-			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[0].(string))
+			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[rowIndexTimestamp].(string))
 			if err != nil {
 				log.Print(err)
 				continue
 			}
 			condition.Timestamp = timestamp
-			condition.Condition = v[1].(string)
-			cLevel := v[2].(string)
-			condition.IsSitting = v[3].(bool)
-			condition.JIAIsuUUID = v[4].(string)
-			condition.Message = v[5].(string)
+			condition.Condition = v[rowIndexCondition].(string)
+			cLevel := v[rowIndexConditionLevel].(string)
+			condition.IsSitting = v[rowIndexIsSitting].(bool)
+			condition.JIAIsuUUID = v[rowIndexJIAIsuUUID].(string)
+			condition.Message = v[rowIndexMessage].(string)
 			conditions = append(conditions, condition)
 
 			if _, ok := conditionLevel[cLevel]; ok {

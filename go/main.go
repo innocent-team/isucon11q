@@ -868,19 +868,42 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 	conditionsInThisHour := []IsuCondition{}
 	timestampsInThisHour := []int64{}
 	var startTimeInThisHour time.Time
-	var condition IsuCondition
 
-	rows, err := tx.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", jiaIsuUUID)
+	var conditions []IsuCondition
+	var influxResp *client.Response
+	c := InfluxClient()
+	query := client.NewQueryWithParameters(`
+		SELECT * FROM "condition"
+		WHERE "jiaIsuUUID" = $jiaIsuUUID
+		ORDER BY "time" ASC`, "isu", "", client.Params{
+			"jiaIsuUUID": jiaIsuUUID,
+		})
+	influxResp, err := c.Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("db error: %v", err)
+		return nil, fmt.Errorf("influx query error: %v", err)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("influx error: %v", influxResp.Err)
+	}
+	log.Printf("values: %+v", influxResp.Results)
+	if len(influxResp.Results[0].Series) != 0 {
+		for _, v := range influxResp.Results[0].Series[0].Values {
+			condition := IsuCondition{}
+			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[rowIndexTimestamp].(string))
+			if err != nil {
+				log.Print(err)
+				continue
+			}
+			condition.Timestamp = timestamp
+			condition.Condition = v[rowIndexCondition].(string)
+			condition.IsSitting = v[rowIndexIsSitting].(bool)
+			condition.JIAIsuUUID = v[rowIndexJIAIsuUUID].(string)
+			condition.Message = v[rowIndexMessage].(string)
+			conditions = append(conditions, condition)
+		}
 	}
 
-	for rows.Next() {
-		err = rows.StructScan(&condition)
-		if err != nil {
-			return nil, err
-		}
-
+	for _, condition := range conditions {
 		truncatedConditionTime := condition.Timestamp.Truncate(time.Hour)
 		if truncatedConditionTime != startTimeInThisHour {
 			if len(conditionsInThisHour) > 0 {

@@ -22,6 +22,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	echopprof "github.com/hiko1129/echo-pprof"
+	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -1083,7 +1084,16 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 	conditions := []IsuCondition{}
 	var err error
 
+	var influxResp *client.Response
+	c := InfluxClient()
 	if startTime.IsZero() {
+		query := client.NewQueryWithParameters(`SELECT * FROM "condition" WHERE "jiaIsuUUID" = $jiaIsuUUID AND "time" < $endTime ORDER BY "time" DESC`, "isu", "", client.Params{
+			"jiaIsuUUID": jiaIsuUUID,
+			"endTime":    endTime,
+		})
+		influxResp, err = c.Query(query)
+		log.Printf("error: %v", influxResp.Err)
+		log.Printf("values: %+v", influxResp.Results[0].Series[0].Values)
 		err = db.SelectContext(ctx, &conditions,
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
@@ -1285,7 +1295,7 @@ func postIsuCondition(c echo.Context) error {
 				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
 				"	VALUES (?, ?, ?, ?, ?)",
 			jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
-		
+
 		if err != nil {
 			c.Logger().Errorf("db error: %v", err)
 			return c.NoContent(http.StatusInternalServerError)

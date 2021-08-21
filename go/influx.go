@@ -154,14 +154,11 @@ func columnMap(columns []string) map[string]int {
 
 func getLastCondtionsByIsuList(isuList []Isu) (map[string]InfluxCondition, error) {
 	var builder strings.Builder
-	builder.WriteString(`SELECT last(*) FROM "condition" WHERE "jiaIsuUUID" =~ /`)
-    for i, id := range isuList {
-		if i != 0 {
-			builder.WriteString(`|`)
-		}
+    for _, id := range isuList {
+		builder.WriteString(`SELECT last(*) FROM "condition" WHERE "jiaIsuUUID" = '`)
 		builder.WriteString(id.JIAIsuUUID)
+		builder.WriteString(`ORDER BY "time" DESC; `)
     }
-	builder.WriteString(`/ GROUP BY "jiaIsuUUID" ORDER BY "time" DESC `)
 	q := client.NewQueryWithParameters(builder.String(), "isu", "", client.Params{})
 	c := InfluxClient()
 	result, err := c.Query(q)
@@ -170,24 +167,25 @@ func getLastCondtionsByIsuList(isuList []Isu) (map[string]InfluxCondition, error
 	}
 
 	influxConditionsMap := map[string]InfluxCondition{}
-	for _, row := range result.Results[0].Series {
+	for _, res := range result.Results {
+		row := res.Series[0]
 		m := columnMap(row.Columns)
-		jiaIsuUUID := row.Tags[fJIAIsuUUID]
 		for _, v := range row.Values {
 			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[m["time"]].(string))
 			if err != nil {
 				log.Printf("error: timestamp  %v", err)
 				continue
 			}
+			id :=v[m[fJIAIsuUUID]].(string)
 			condition := InfluxCondition {
 				Timestamp: timestamp,
-				Condition: v[m["last_condition"]].(string),
-				ConditionLevel: v[m["last_conditionLevel"]].(string),
-				IsSitting: v[m["last_isSitting"]].(bool),
-				JIAIsuUUID: jiaIsuUUID,
-				Message: v[m["last_message"]].(string),
+				Condition: v[m[fCondition]].(string),
+				ConditionLevel: v[m[fConditionLevel]].(string),
+				IsSitting: v[m[fIsSitting]].(bool),
+				JIAIsuUUID: id,
+				Message: v[m[fMessage]].(string),
 			}
-			influxConditionsMap[jiaIsuUUID] = condition
+			influxConditionsMap[id] = condition
 		}
 	}
 	return influxConditionsMap, nil

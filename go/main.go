@@ -230,6 +230,7 @@ func main() {
 	e.POST("/api/auth", postAuthentication)
 	e.POST("/api/signout", postSignout)
 	e.GET("/api/user/me", getMe)
+	e.GET("/api/icon_for_devonly/:jia_isu_uuid", getIsuIconDevonly)
 	e.GET("/api/isu", getIsuList)
 	e.POST("/api/isu", postIsu)
 	e.GET("/api/isu/:jia_isu_uuid", getIsuID)
@@ -538,6 +539,8 @@ func getIsuList(c echo.Context) error {
 	return c.JSON(http.StatusOK, responseList)
 }
 
+const iconDirectory = "/home/isucon/webapp/icon/"
+
 // POST /api/isu
 // ISUを登録
 func postIsu(c echo.Context) error {
@@ -593,10 +596,15 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
+	err = ioutil.WriteFile(iconDirectory+jiaIsuUUID, image, 0777)
+	if err != nil {
+		c.Logger().Errorf("failed to upload file: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
 
 	_, err = tx.ExecContext(ctx, "INSERT INTO `isu`"+
-		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)",
-		jiaIsuUUID, isuName, image, jiaUserID)
+		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, NULL, ?)",
+		jiaIsuUUID, isuName, jiaUserID)
 	if err != nil {
 		mysqlErr, ok := err.(*mysql.MySQLError)
 
@@ -721,9 +729,40 @@ func getIsuIcon(c echo.Context) error {
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 
+	var isu Isu
+	err = db.GetContext(ctx, &isu, "SELECT `jia_isu_uuid` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?", jiaUserID, jiaIsuUUID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.String(http.StatusNotFound, "not found: isu")
+		}
+
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
 	var image []byte
-	err = db.GetContext(ctx, &image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
-		jiaUserID, jiaIsuUUID)
+	image, err = ioutil.ReadFile(iconDirectory + jiaIsuUUID)
+	if err == nil {
+		return c.Blob(http.StatusOK, "", image)
+	} else {
+		if !os.IsNotExist(err) {
+			c.Logger().Errorf("failed to read icon file: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+	}
+
+	c.Logger().Error("gazou kakidasetenaiyo!!!")
+	return c.NoContent(http.StatusInternalServerError)
+}
+
+// GET /api/isu_icon_for_devonly/:jia_isu_uuid
+// ISUのアイコン画像を吸い出す用のエンドポイント。使いおわったら消してよい
+func getIsuIconDevonly(c echo.Context) error {
+	ctx := c.Request().Context()
+	jiaIsuUUID := c.Param("jia_isu_uuid")
+	var image []byte
+
+	err := db.GetContext(ctx, &image, "SELECT `image` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return c.String(http.StatusNotFound, "not found: isu")

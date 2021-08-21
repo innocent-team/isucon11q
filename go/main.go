@@ -1216,7 +1216,7 @@ func getTrend(c echo.Context) error {
 func postIsuCondition(c echo.Context) error {
 	ctx := c.Request().Context()
 	// TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
-	dropProbability := 0.9
+	dropProbability := 0.0
 	if rand.Float64() <= dropProbability {
 		c.Logger().Warnf("drop post isu condition request")
 		return c.NoContent(http.StatusAccepted)
@@ -1235,20 +1235,12 @@ func postIsuCondition(c echo.Context) error {
 	} else if len(req) == 0 {
 		return c.String(http.StatusBadRequest, fmt.Sprintf("%+v", req))
 	}
-	log.Print("!!!!!!!!!!!!!request body ok")
-
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
 
 	var isus []struct {
 		Character string `json:"character"`
 		ID int `json:"id"`
 	}
-	err = tx.GetContext(ctx, &isus, "SELECT `character`, `id` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	err = db.GetContext(ctx, &isus, "SELECT `character`, `id` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.String(http.StatusNotFound, "not found: isu")
@@ -1270,18 +1262,6 @@ func postIsuCondition(c echo.Context) error {
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
 
-		log.Print("!!!!!!!!!!!!!INSERT INTO `isu_condition`")
-		_, err = tx.ExecContext(ctx,
-			"INSERT INTO `isu_condition`"+
-				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
-				"	VALUES (?, ?, ?, ?, ?)",
-			jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
-
-		if err != nil {
-			c.Logger().Errorf("db error: %v", err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
-
 		// influxdb あとでgo-routingにする。
 		err = InsertConditions(isuID, jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, character)
 
@@ -1291,11 +1271,6 @@ func postIsuCondition(c echo.Context) error {
 		}
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
 
 	log.Print("!!!!!!!!!!!!!everything is ok")
 

@@ -1299,27 +1299,16 @@ func postIsuCondition(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-<<<<<<< HEAD
-	var count int
-	log.Print("!!!!!!!!!!!!!SELECT COUNT(*) FROM `isu`")
-	err = tx.GetContext(ctx, &count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
-=======
 	var isus []struct{
 		Character string `json:"character"`
 	}
 	err = tx.GetContext(ctx, &isus, "SELECT `character` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
->>>>>>> cd715b2 (add character)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		log.Print("!!!!!!!!!!!!!SELECT COUNT(*) FROM `isu` SERVER ERROR!!!!!!!!!!!!!!!!!!!!!!!!")
 		return c.NoContent(http.StatusInternalServerError)
 	}
-<<<<<<< HEAD
-	if count == 0 {
-		log.Print("!!!!!!!!!!!!!SELECT COUNT(*) FROM `isu` not found!!!!!!!!!!!!!!!!!!!!!!!!")
-=======
 	if len(isus) == 0 {
->>>>>>> cd715b2 (add character)
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 	character := isus[0].Character

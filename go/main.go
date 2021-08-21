@@ -491,7 +491,7 @@ func getIsuList(c echo.Context) error {
 	for _, i := range isuList {
 		isuUUIDs = append(isuUUIDs, i.JIAIsuUUID)
 	}
-	query, args, err := sqlx.In("SELECT jia_isu_uuid, `timestamp`, is_sitting, `condition`, message FROM (SELECT *, MAX(`timestamp`) OVER (PARTITION BY jia_isu_uuid) AS max_timestamp FROM isu_condition) tmp WHERE jia_isu_uuid IN (?) `timestamp` = `max_timestamp`", isuUUIDs)
+	query, args, err := sqlx.In("SELECT jia_isu_uuid, `timestamp`, is_sitting, `condition`, message FROM (SELECT *, MAX(`timestamp`) OVER (PARTITION BY jia_isu_uuid) AS max_timestamp FROM isu_condition) tmp WHERE jia_isu_uuid IN (?) AND `timestamp` = `max_timestamp`", isuUUIDs)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)

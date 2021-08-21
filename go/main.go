@@ -1086,42 +1086,50 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 
 	var influxResp *client.Response
 	c := InfluxClient()
+	var query client.Query
 	if startTime.IsZero() {
-		query := client.NewQueryWithParameters(`SELECT * FROM "condition" WHERE "jiaIsuUUID" = $jiaIsuUUID AND "time" < $endTime ORDER BY "time" DESC`, "isu", "", client.Params{
+		query = client.NewQueryWithParameters(`
+			SELECT * FROM "condition"
+			WHERE "jiaIsuUUID" = $jiaIsuUUID
+			AND "time" < $endTime ORDER BY "time" DESC`,
+			"isu", "", client.Params{
 			"jiaIsuUUID": jiaIsuUUID,
 			"endTime":    endTime,
 		})
-		influxResp, err = c.Query(query)
-		log.Printf("error: %v", err)
-		log.Printf("influx error: %v", influxResp.Err)
-		log.Printf("values: %+v", influxResp.Results)
-		if len(influxResp.Results[0].Series) != 0 {
-			for _, v := range influxResp.Results[0].Series[0].Values {
-				condition := IsuCondition{}
-				timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[0].(string))
-				if err != nil {
-					log.Print(err)
-					continue
-				}
-				condition.Timestamp = timestamp
-				condition.Condition = v[1].(string)
-				condition.IsSitting = v[3].(bool)
-				condition.JIAIsuUUID = v[4].(string)
-				condition.Message = v[5].(string)
-				conditions = append(conditions, condition)
-			}
-		}
 	} else {
-		err = db.SelectContext(ctx, &conditions,
-			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
-				"	AND `timestamp` < ?"+
-				"	AND ? <= `timestamp`"+
-				"	ORDER BY `timestamp` DESC",
-			jiaIsuUUID, endTime, startTime,
-		)
+		query = client.NewQueryWithParameters(`
+			SELECT * FROM "condition"
+			WHERE "jiaIsuUUID" = $jiaIsuUUID
+			AND "time" < $endTime AND $startTime <= "time" ORDER BY "time" DESC`,
+			"isu", "", client.Params{
+			"jiaIsuUUID": jiaIsuUUID,
+			"endTime":    endTime,
+			"startTime":    startTime,
+		})
+	}
+	influxResp, err = c.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("influx query error: %v", err)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("db error: %v", err)
+		return nil, fmt.Errorf("influx error: %v", influxResp.Err)
+	}
+	log.Printf("values: %+v", influxResp.Results)
+	if len(influxResp.Results[0].Series) != 0 {
+		for _, v := range influxResp.Results[0].Series[0].Values {
+			condition := IsuCondition{}
+			timestamp, err := time.Parse("2006-01-02T15:04:05Z0700", v[0].(string))
+			if err != nil {
+				log.Print(err)
+				continue
+			}
+			condition.Timestamp = timestamp
+			condition.Condition = v[1].(string)
+			condition.IsSitting = v[3].(bool)
+			condition.JIAIsuUUID = v[4].(string)
+			condition.Message = v[5].(string)
+			conditions = append(conditions, condition)
+		}
 	}
 
 	conditionsResponse := []*GetIsuConditionResponse{}

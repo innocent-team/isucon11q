@@ -717,6 +717,10 @@ func getIsuID(c echo.Context) error {
 // ISUのアイコンを取得
 func getIsuIcon(c echo.Context) error {
 	ctx := c.Request().Context()
+	jiaIsuUUID := c.Param("jia_isu_uuid")
+	if c.Request().Header.Get("If-None-Match") == jiaIsuUUID {
+		return c.NoContent(http.StatusNotModified)
+	}
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -726,8 +730,6 @@ func getIsuIcon(c echo.Context) error {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-
-	jiaIsuUUID := c.Param("jia_isu_uuid")
 
 	var isu Isu
 	err = db.GetContext(ctx, &isu, "SELECT `jia_isu_uuid` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?", jiaUserID, jiaIsuUUID)
@@ -743,6 +745,7 @@ func getIsuIcon(c echo.Context) error {
 	var image []byte
 	image, err = ioutil.ReadFile(iconDirectory + jiaIsuUUID)
 	if err == nil {
+		c.Response().Header().Set("Etag", jiaIsuUUID)
 		return c.Blob(http.StatusOK, "", image)
 	} else {
 		if !os.IsNotExist(err) {

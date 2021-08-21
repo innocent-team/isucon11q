@@ -5,6 +5,7 @@ import (
 	"time"
 
 	client "github.com/influxdata/influxdb1-client/v2"
+	"github.com/labstack/gommon/log"
 )
 
 const INFLUX_WRITE_SPAN = 500 * time.Millisecond
@@ -71,6 +72,7 @@ func WriteCondition() {
 	if conditionPoints != nil && len(conditionPoints.Points()) > 0 {
 		c := InfluxClient()
 		defer c.Close()
+		log.Printf("%#+v", conditionPoints)
 		err := c.Write(conditionPoints)
 		if err != nil {
 			fmt.Println("Error Influx Write: ", err.Error())

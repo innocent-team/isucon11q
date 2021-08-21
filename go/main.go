@@ -359,7 +359,7 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	for _, cond := range initialConditions {
-		point, err := CreatePoint(cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.Character)
+		point, err := CreatePoint(cond.ID, cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.Character)
 		if err != nil {
 			return fmt.Errorf("Error CreatePoint: %w", err)
 		}

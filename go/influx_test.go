@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"testing" // テストで使える関数・構造体が用意されているパッケージをimport
 	"time"
 
@@ -10,14 +11,14 @@ import (
 
 func TestInflux(t *testing.T) {
 	WriteCondition()
-	InsertConditions("222", time.Now(), true, "is_dirty=false,is_overweight=false,is_broken=false", "へろー", "やっかみ")
-	InsertConditions("111", time.Now(), true, "is_dirty=false,is_overweight=false,is_broken=false", "へろー", "なまいき")
+	InsertConditions(2, "222", time.Now(), true, "is_dirty=false,is_overweight=false,is_broken=false", "へろー", "やっかみ")
+	InsertConditions(1, "111", time.Now(), true, "is_dirty=false,is_overweight=false,is_broken=false", "へろー", "なまいき")
 	WriteCondition()
 	PrintInfluxdb()
 }
 
 func TestCreatePoint(t *testing.T) {
-	t.Log(CreatePoint("111", time.Now(), true, "is_dirty=false,is_overweight=false,is_broken=false", "へろー", "なまいき"))
+	t.Log(CreatePoint(1, "111", time.Now(), true, "is_dirty=false,is_overweight=false,is_broken=false", "へろー", "なまいき"))
 }
 
 func TestIsuConditions(t *testing.T) {
@@ -109,4 +110,12 @@ func TestIsuGraphResponse(t *testing.T) {
 		}
 	}
 	t.Logf("%+#v", conditions)
+}
+
+func TestTrend(t *testing.T) {
+	res, err := getTrendByCharacterType("なまいき")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("OK %+#v\n" ,res)
 }

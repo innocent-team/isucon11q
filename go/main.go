@@ -743,6 +743,7 @@ func getIsuIcon(c echo.Context) error {
 	var image []byte
 	image, err = ioutil.ReadFile(iconDirectory + jiaIsuUUID)
 	if err == nil {
+		c.Response().Header().Set("Etag", jiaIsuUUID)
 		return c.Blob(http.StatusOK, "", image)
 	} else {
 		if !os.IsNotExist(err) {

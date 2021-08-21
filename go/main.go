@@ -876,13 +876,13 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 		SELECT * FROM "condition"
 		WHERE "jiaIsuUUID" = $jiaIsuUUID
 		ORDER BY "time" ASC`, "isu", "", client.Params{
-			"jiaIsuUUID": jiaIsuUUID,
-		})
+		"jiaIsuUUID": jiaIsuUUID,
+	})
 	influxResp, err := c.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("influx query error: %v", err)
 	}
-	if err != nil {
+	if influxResp.Err != "" {
 		return nil, fmt.Errorf("influx error: %v", influxResp.Err)
 	}
 	log.Printf("values: %+v", influxResp.Results)

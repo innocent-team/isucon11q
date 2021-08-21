@@ -1114,7 +1114,6 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 		return nil, fmt.Errorf("influx error: %v", influxResp.Err)
 	}
 	log.Printf("values: %+v", influxResp.Results)
-	conditionsResponse := []*GetIsuConditionResponse{}
 	if len(influxResp.Results[0].Series) != 0 {
 		for _, v := range influxResp.Results[0].Series[0].Values {
 			condition := IsuCondition{}
@@ -1125,24 +1124,31 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 			}
 			condition.Timestamp = timestamp
 			condition.Condition = v[rowIndexCondition].(string)
-			cLevel := v[rowIndexConditionLevel].(string)
 			condition.IsSitting = v[rowIndexIsSitting].(bool)
 			condition.JIAIsuUUID = v[rowIndexJIAIsuUUID].(string)
 			condition.Message = v[rowIndexMessage].(string)
 			conditions = append(conditions, condition)
+		}
+	}
 
-			if _, ok := conditionLevel[cLevel]; ok {
-				data := GetIsuConditionResponse{
-					JIAIsuUUID:     condition.JIAIsuUUID,
-					IsuName:        isuName,
-					Timestamp:      timestamp.Unix(),
-					IsSitting:      condition.IsSitting,
-					Condition:      condition.Condition,
-					ConditionLevel: cLevel,
-					Message:        condition.Message,
-				}
-				conditionsResponse = append(conditionsResponse, &data)
+	conditionsResponse := []*GetIsuConditionResponse{}
+	for _, c := range conditions {
+		cLevel, err := calculateConditionLevel(c.Condition)
+		if err != nil {
+			continue
+		}
+
+		if _, ok := conditionLevel[cLevel]; ok {
+			data := GetIsuConditionResponse{
+				JIAIsuUUID:     c.JIAIsuUUID,
+				IsuName:        isuName,
+				Timestamp:      c.Timestamp.Unix(),
+				IsSitting:      c.IsSitting,
+				Condition:      c.Condition,
+				ConditionLevel: cLevel,
+				Message:        c.Message,
 			}
+			conditionsResponse = append(conditionsResponse, &data)
 		}
 	}
 

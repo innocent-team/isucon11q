@@ -19,6 +19,7 @@ const (
 	fIsSitting      = "isSitting"
 	fConditionLevel = "conditionLevel"
 	fCharacter = "character"
+	fIsuID = "isuID"
 )
 
 var influxAddr string
@@ -36,7 +37,7 @@ func InfluxClient() client.Client {
 	return c
 }
 
-func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, condition string, message string, character string) (*client.Point, error) {
+func CreatePoint(isuID int,jiaIsuUUID string, timestamp time.Time, isSitting bool, condition string, message string, character string) (*client.Point, error) {
 	tags := map[string]string{
 		fJIAIsuUUID: jiaIsuUUID,
 		fCharacter: character,
@@ -50,6 +51,7 @@ func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, conditi
 		fCondition:      condition,
 		fMessage:        message,
 		fConditionLevel: conditionLevel,
+		fIsuID: isuID,
 	}
 	point, err := client.NewPoint("condition", tags, fields, timestamp)
 	if err != nil {
@@ -60,8 +62,8 @@ func CreatePoint(jiaIsuUUID string, timestamp time.Time, isSitting bool, conditi
 
 var conditionPoints client.BatchPoints
 
-func InsertConditions(jiaIsuUUID string, timestamp time.Time, isSitting bool, scondition string, message string, character string) error {
-	point, err := CreatePoint(jiaIsuUUID, timestamp, isSitting, scondition, message, character)
+func InsertConditions(isuID int, jiaIsuUUID string, timestamp time.Time, isSitting bool, scondition string, message string, character string) error {
+	point, err := CreatePoint(isuID, jiaIsuUUID, timestamp, isSitting, scondition, message, character)
 	if err != nil {
 		return fmt.Errorf("Error CreatePoint: %w", err)
 	}

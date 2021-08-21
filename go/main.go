@@ -1304,8 +1304,9 @@ func postIsuCondition(c echo.Context) error {
 
 	var isus []struct {
 		Character string `json:"character"`
+		ID int `json:"id"`
 	}
-	err = tx.GetContext(ctx, &isus, "SELECT `character` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	err = tx.GetContext(ctx, &isus, "SELECT `character`, `id` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		log.Print("!!!!!!!!!!!!!SELECT COUNT(*) FROM `isu` SERVER ERROR!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -1315,6 +1316,7 @@ func postIsuCondition(c echo.Context) error {
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 	character := isus[0].Character
+	isuID := isus[0].ID
 
 	for _, cond := range req {
 		timestamp := time.Unix(cond.Timestamp, 0)
@@ -1336,7 +1338,7 @@ func postIsuCondition(c echo.Context) error {
 		}
 
 		// influxdb あとでgo-routingにする。
-		err = InsertConditions(jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, character)
+		err = InsertConditions(isuID, jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, character)
 
 		if err != nil {
 			c.Logger().Errorf("influx error: %v", err)

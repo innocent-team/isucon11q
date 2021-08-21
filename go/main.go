@@ -1093,19 +1093,19 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 			WHERE "jiaIsuUUID" = $jiaIsuUUID
 			AND "time" < $endTime ORDER BY "time" DESC`,
 			"isu", "", client.Params{
-			"jiaIsuUUID": jiaIsuUUID,
-			"endTime":    endTime,
-		})
+				"jiaIsuUUID": jiaIsuUUID,
+				"endTime":    endTime,
+			})
 	} else {
 		query = client.NewQueryWithParameters(`
 			SELECT * FROM "condition"
 			WHERE "jiaIsuUUID" = $jiaIsuUUID
 			AND "time" < $endTime AND $startTime <= "time" ORDER BY "time" DESC`,
 			"isu", "", client.Params{
-			"jiaIsuUUID": jiaIsuUUID,
-			"endTime":    endTime,
-			"startTime":    startTime,
-		})
+				"jiaIsuUUID": jiaIsuUUID,
+				"endTime":    endTime,
+				"startTime":  startTime,
+			})
 	}
 	influxResp, err = c.Query(query)
 	if err != nil {
@@ -1115,6 +1115,7 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 		return nil, fmt.Errorf("influx error: %v", influxResp.Err)
 	}
 	log.Printf("values: %+v", influxResp.Results)
+	conditionsResponse := []*GetIsuConditionResponse{}
 	if len(influxResp.Results[0].Series) != 0 {
 		for _, v := range influxResp.Results[0].Series[0].Values {
 			condition := IsuCondition{}
@@ -1125,31 +1126,24 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 			}
 			condition.Timestamp = timestamp
 			condition.Condition = v[1].(string)
+			cLevel := v[2].(string)
 			condition.IsSitting = v[3].(bool)
 			condition.JIAIsuUUID = v[4].(string)
 			condition.Message = v[5].(string)
 			conditions = append(conditions, condition)
-		}
-	}
 
-	conditionsResponse := []*GetIsuConditionResponse{}
-	for _, c := range conditions {
-		cLevel, err := calculateConditionLevel(c.Condition)
-		if err != nil {
-			continue
-		}
-
-		if _, ok := conditionLevel[cLevel]; ok {
-			data := GetIsuConditionResponse{
-				JIAIsuUUID:     c.JIAIsuUUID,
-				IsuName:        isuName,
-				Timestamp:      c.Timestamp.Unix(),
-				IsSitting:      c.IsSitting,
-				Condition:      c.Condition,
-				ConditionLevel: cLevel,
-				Message:        c.Message,
+			if _, ok := conditionLevel[cLevel]; ok {
+				data := GetIsuConditionResponse{
+					JIAIsuUUID:     condition.JIAIsuUUID,
+					IsuName:        isuName,
+					Timestamp:      timestamp.Unix(),
+					IsSitting:      condition.IsSitting,
+					Condition:      condition.Condition,
+					ConditionLevel: cLevel,
+					Message:        condition.Message,
+				}
+				conditionsResponse = append(conditionsResponse, &data)
 			}
-			conditionsResponse = append(conditionsResponse, &data)
 		}
 	}
 

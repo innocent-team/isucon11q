@@ -234,7 +234,7 @@ func main() {
 	e.POST("/api/isu", postIsu)
 	e.GET("/api/isu/:jia_isu_uuid", getIsuID)
 	e.GET("/api/isu/:jia_isu_uuid/icon", getIsuIcon)
-	e.GET("/api/isu/icon_for_devonly/:jia_isu_uuid", getIsuIconDevonly)
+	e.GET("/api/isu_icon_for_devonly/:jia_isu_uuid", getIsuIconDevonly)
 	e.GET("/api/isu/:jia_isu_uuid/graph", getIsuGraph)
 	e.GET("/api/condition/:jia_isu_uuid", getIsuConditions)
 	e.GET("/api/trend", getTrend)
@@ -767,7 +767,7 @@ func getIsuIcon(c echo.Context) error {
 	return c.Blob(http.StatusOK, "", image)
 }
 
-// GET /api/isu/icon_for_devonly/:jia_isu_uuid
+// GET /api/isu_icon_for_devonly/:jia_isu_uuid
 // ISUのアイコン画像を吸い出す用のエンドポイント。使いおわったら消してよい
 func getIsuIconDevonly(c echo.Context) error {
 	ctx := c.Request().Context()

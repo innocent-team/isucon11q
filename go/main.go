@@ -729,6 +729,17 @@ func getIsuIcon(c echo.Context) error {
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 
+	var isu Isu
+	err = db.GetContext(ctx, &isu, "SELECT `jia_isu_uuid` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?", jiaUserID, jiaIsuUUID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.String(http.StatusNotFound, "not found: isu")
+		}
+
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
 	var image []byte
 	image, err = ioutil.ReadFile(iconDirectory + jiaIsuUUID)
 	if err == nil {
@@ -739,6 +750,8 @@ func getIsuIcon(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
+
+	// TODO: 全部ファイルに書き出せたら、DBから返すのをやめる
 	err = db.GetContext(ctx, &image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 		jiaUserID, jiaIsuUUID)
 	if err != nil {

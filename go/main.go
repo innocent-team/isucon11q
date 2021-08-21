@@ -349,14 +349,17 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	var initialConditions []IsuCondition
-	err = db.SelectContext(ctx, &initialConditions, "SELECT * FROM `isu_condition`")
+	var initialConditions []struct {
+		IsuCondition
+		Character string `db:"character"`
+	}
+	err = db.SelectContext(ctx, &initialConditions, "SELECT ic.*, i.character FROM `isu_condition` ic INNER JOIN isu i ON i.jia_isu_uuid = ic.jia_isu_uuid")
 	if err != nil {
 		c.Logger().Errorf("select initial conditions error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	for _, cond := range initialConditions {
-		point, err := CreatePoint(cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message)
+		point, err := CreatePoint(cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.Character)
 		if err != nil {
 			return fmt.Errorf("Error CreatePoint: %w", err)
 		}
@@ -548,7 +551,7 @@ func getIsuList(c echo.Context) error {
 			LatestIsuCondition: formattedCondition}
 		responseList = append(responseList, res)
 	}
-	
+
 	return c.JSON(http.StatusOK, responseList)
 }
 
@@ -1142,7 +1145,7 @@ func getIsuConditionsFromDB(ctx context.Context, db *sqlx.DB, jiaIsuUUID string,
 	influxConditions := ResultInfluxConditons(influxResp.Results[0])
 	conditionsResponse := []*GetIsuConditionResponse{}
 	if len(influxResp.Results[0].Series) != 0 {
-		for _, condition := range influxConditions  {
+		for _, condition := range influxConditions {
 			if _, ok := conditionLevel[condition.ConditionLevel]; ok {
 				data := GetIsuConditionResponse{
 					JIAIsuUUID:     condition.JIAIsuUUID,
@@ -1299,7 +1302,7 @@ func postIsuCondition(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	var isus []struct{
+	var isus []struct {
 		Character string `json:"character"`
 	}
 	err = tx.GetContext(ctx, &isus, "SELECT `character` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)

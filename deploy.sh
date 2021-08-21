@@ -22,18 +22,14 @@ set -ex
 
 sudo systemctl daemon-reload
 
-echo "Restarting App"
-pushd go
-go build
-sudo systemctl enable isucondition.go.service
-sudo systemctl restart isucondition.go.service
-popd
-
-echo "Restarting nginx"
-sudo cp -a ./conf/all/etc/nginx/nginx.conf /etc/nginx/nginx.conf
-sudo cp -a ./conf/all/etc/nginx/sites-available/isucondition.conf /etc/nginx/sites-available/isucondition.conf
-sudo systemctl enable nginx
-sudo nginx -t &&  sudo systemctl restart nginx
+if [[ "$INSTANCE_NUM" == 1 ]]; then
+  echo "Restarting App"
+  pushd go
+  go build
+  sudo systemctl enable isucondition.go.service
+  sudo systemctl restart isucondition.go.service
+  popd
+fi
 
 if [[ "$INSTANCE_NUM" == 2 ]]; then
   echo "Restarting mysql"
@@ -51,4 +47,10 @@ if [[ "$INSTANCE_NUM" == 3 ]]; then
   sudo cp -a ./conf/$INSTANCE_NUM/etc/influxdb/influxdb.conf /etc/influxdb/influxdb.conf
   sudo systemctl enable influxdb
   sudo systemctl restart influxdb
+
+  echo "Restarting nginx"
+  sudo cp -a ./conf/all/etc/nginx/nginx.conf /etc/nginx/nginx.conf
+  sudo cp -a ./conf/all/etc/nginx/sites-available/isucondition.conf /etc/nginx/sites-available/isucondition.conf
+  sudo systemctl enable nginx
+  sudo /opt/sbin/nginx -c /etc/nginx/nginx.conf -t &&  sudo systemctl restart nginx
 fi

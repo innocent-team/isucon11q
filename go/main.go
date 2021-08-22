@@ -357,14 +357,15 @@ func postInitialize(c echo.Context) error {
 		Message    string    `db:"message"`
 		CreatedAt  time.Time `db:"created_at"`
 		Character  string    `db:"character"`
+		IsuID  int `db:"isu_id"`
 	}
-	err = db.SelectContext(ctx, &initialConditions, "SELECT ic.*, i.character FROM `isu_condition` ic INNER JOIN isu i ON i.jia_isu_uuid = ic.jia_isu_uuid")
+	err = db.SelectContext(ctx, &initialConditions, "SELECT ic.*, i.character, i.id  AS isu_id FROM `isu_condition` ic INNER JOIN isu i ON i.jia_isu_uuid = ic.jia_isu_uuid")
 	if err != nil {
 		c.Logger().Errorf("select initial conditions error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	for _, cond := range initialConditions {
-		point, err := CreatePoint(cond.ID, cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.Character)
+		point, err := CreatePoint(cond.IsuID, cond.JIAIsuUUID, cond.Timestamp, cond.IsSitting, cond.Condition, cond.Message, cond.Character)
 		if err != nil {
 			return fmt.Errorf("Error CreatePoint: %w", err)
 		}

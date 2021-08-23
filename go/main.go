@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -1138,10 +1139,22 @@ func calculateConditionLevel(condition string) (string, error) {
 	return conditionLevel, nil
 }
 
+var latestTrendResponse *[]TrendResponse
+var trendMutex sync.RWMutex
+var trendLastUpdated time.Time = time.Now()
+
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
 func getTrend(c echo.Context) error {
 	ctx := c.Request().Context()
+
+	// 500msキャッシュしたい
+	trendMutex.RLock()
+	if latestTrendResponse != nil && time.Now().After(trendLastUpdated.Add(500*time.Millisecond)) {
+		trendMutex.RUnlock()
+		return c.JSON(http.StatusOK, *latestTrendResponse)
+	}
+	trendMutex.RUnlock()
 
 	allIsu := []Isu{}
 	err := db.SelectContext(ctx, &allIsu, "SELECT * FROM `isu`")
@@ -1211,6 +1224,11 @@ func getTrend(c echo.Context) error {
 				Critical:  characterCriticalIsuConditions,
 			})
 	}
+
+	trendMutex.Lock()
+	latestTrendResponse = &res
+	trendMutex.Unlock()
+	trendLastUpdated = time.Now()
 
 	return c.JSON(http.StatusOK, res)
 }

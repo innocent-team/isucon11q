@@ -349,6 +349,23 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	var lastConditionTimestamps []struct {
+		JIAIsuUUID    string    `db:"jia_isu_uuid"`
+		LastTimestamp time.Time `db:"last_timestamp"`
+	}
+	err = db.SelectContext(ctx, &lastConditionTimestamps, "SELECT jia_isu_uuid, MAX(`timestamp`) AS last_timestamp FROM isu_condition")
+	if err != nil {
+		c.Logger().Errorf("db error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	for _, isu := range lastConditionTimestamps {
+		_, err = db.ExecContext(ctx, "UPDATE isu SET last_condition_timestamp = ? WHERE jia_isu_uuid = ?", isu.LastTimestamp, isu.JIAIsuUUID)
+		if err != nil {
+			c.Logger().Errorf("db error : %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+	}
+
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
@@ -1270,15 +1287,11 @@ func postIsuCondition(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	marshal, err := json.Marshal(lastCondition)
+	_, err = db.ExecContext(ctx, "UPDATE `isu_condition` SET `last_condition_timestamp` = ? WHERE `jia_isu_uuid` = ?", lastCondition.Timestamp, jiaIsuUUID)
 	if err != nil {
-		c.Logger().Errorf("marshal error: %v", err)
+		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	memcacheClient.Set(&memcache.Item{
-		Key:   latestIsuConditionKey(jiaIsuUUID),
-		Value: marshal,
-	})
 
 	return c.NoContent(http.StatusAccepted)
 }

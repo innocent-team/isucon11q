@@ -10,6 +10,7 @@ CREATE TABLE `isu` (
   `image` LONGBLOB,
   `character` VARCHAR(255),
   `jia_user_id` VARCHAR(255) NOT NULL,
+  `last_condition_timestamp` DATETIME NOT NULL DEFAULT '2000-01-01 00:00:00',
   `created_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
    PRIMARY KEY(`id`),

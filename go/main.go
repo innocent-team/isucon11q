@@ -277,6 +277,10 @@ func getSession(r *http.Request) (*sessions.Session, error) {
 	return session, nil
 }
 
+func latestIsuConditionKey(jiaIsuUUID string) string {
+	return "latest-condition-" + jiaIsuUUID
+}
+
 func getUserIDFromSession(c echo.Context) (string, int, error) {
 	ctx := c.Request().Context()
 	session, err := getSession(c.Request())
@@ -1229,8 +1233,13 @@ func postIsuCondition(c echo.Context) error {
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
+	sort.Slice(req, func(i, j int) bool {
+		return req[i].Timestamp > req[j].Timestamp
+	})
+
 	var args []interface{}
 	var sb strings.Builder
+	var lastCondition IsuCondition
 
 	for i, cond := range req {
 		timestamp := time.Unix(cond.Timestamp, 0)
@@ -1245,6 +1254,12 @@ func postIsuCondition(c echo.Context) error {
 			sb.WriteString(",(?, ?, ?, ?, ?)")
 		}
 
+		lastCondition = IsuCondition{
+			Timestamp: timestamp,
+			IsSitting: cond.IsSitting,
+			Condition: cond.Condition,
+			Message:   cond.Message,
+		}
 	}
 	_, err = db.ExecContext(ctx,
 		"INSERT INTO `isu_condition`"+
@@ -1255,6 +1270,15 @@ func postIsuCondition(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	marshal, err := json.Marshal(lastCondition)
+	if err != nil {
+		c.Logger().Errorf("marshal error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	memcacheClient.Set(&memcache.Item{
+		Key:   latestIsuConditionKey(jiaIsuUUID),
+		Value: marshal,
+	})
 
 	return c.NoContent(http.StatusAccepted)
 }

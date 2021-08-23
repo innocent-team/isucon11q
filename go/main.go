@@ -26,15 +26,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
-	sqltrace "github.com/signalfx/signalfx-go-tracing/contrib/database/sql"
-	sqlxtrace "github.com/signalfx/signalfx-go-tracing/contrib/jmoiron/sqlx"
-	echotrace "github.com/signalfx/signalfx-go-tracing/contrib/labstack/echo.v4"
-	httptrace "github.com/signalfx/signalfx-go-tracing/contrib/net/http"
-	"github.com/signalfx/signalfx-go-tracing/tracing"
 )
 
 const (
-	splunkServiceName           = "isucon11q"
 	sessionName                 = "isucondition_go"
 	conditionLimit              = 20
 	frontendContentsPath        = "../public"
@@ -200,9 +194,8 @@ func NewMySQLConnectionEnv() *MySQLConnectionEnv {
 }
 
 func (mc *MySQLConnectionEnv) ConnectDB() (*sqlx.DB, error) {
-	sqltrace.Register("mysql", &mysql.MySQLDriver{}, sqltrace.WithServiceName(splunkServiceName))
 	dsn := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?parseTime=true&loc=Asia%%2FTokyo", mc.User, mc.Password, mc.Host, mc.Port, mc.DBName)
-	return sqlxtrace.Open("mysql", dsn)
+	return sqlx.Open("mysql", dsn)
 }
 
 func init() {
@@ -222,7 +215,6 @@ func main() {
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
 	echopprof.Wrap(e)
-	e.Use(echotrace.Middleware(echotrace.WithServiceName(splunkServiceName)))
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
@@ -268,8 +260,6 @@ func main() {
 	}
 
 	serverPort := fmt.Sprintf(":%v", getEnv("SERVER_APP_PORT", "3000"))
-	tracing.Start(tracing.WithServiceName(splunkServiceName))
-	defer tracing.Stop()
 	e.Logger.Fatal(e.Start(serverPort))
 }
 
@@ -641,8 +631,7 @@ func postIsu(c echo.Context) error {
 	}
 
 	reqJIA.Header.Set("Content-Type", "application/json")
-	httpClient := httptrace.WrapClient(http.DefaultClient)
-	res, err := httpClient.Do(reqJIA)
+	res, err := http.DefaultClient.Do(reqJIA)
 	if err != nil {
 		c.Logger().Errorf("failed to request to JIAService: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -854,7 +843,7 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 	var startTimeInThisHour time.Time
 	var condition IsuCondition
 
-	rows, err := tx.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? AND `timestamp` BETWEEN ? AND ? ORDER BY `timestamp` ASC", jiaIsuUUID, graphDate, graphDate.Add(24 * time.Hour))
+	rows, err := tx.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? AND `timestamp` BETWEEN ? AND ? ORDER BY `timestamp` ASC", jiaIsuUUID, graphDate, graphDate.Add(24*time.Hour))
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
 	}

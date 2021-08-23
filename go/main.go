@@ -89,13 +89,17 @@ type GetIsuListResponse struct {
 }
 
 type IsuCondition struct {
-	ID         int       `db:"id"`
-	JIAIsuUUID string    `db:"jia_isu_uuid"`
-	Timestamp  time.Time `db:"timestamp"`
-	IsSitting  bool      `db:"is_sitting"`
-	Condition  string    `db:"condition"`
-	Message    string    `db:"message"`
-	CreatedAt  time.Time `db:"created_at"`
+	ID             int       `db:"id"`
+	JIAIsuUUID     string    `db:"jia_isu_uuid"`
+	Timestamp      time.Time `db:"timestamp"`
+	IsSitting      bool      `db:"is_sitting"`
+	IsBroken       bool      `db:"is_broken"`
+	IsDirty        bool      `db:"is_dirty"`
+	IsOverweight   bool      `db:"is_overweight"`
+	Condition      string    `db:"condition"`
+	ConditionLevel int       `db:"condition_level"`
+	Message        string    `db:"message"`
+	CreatedAt      time.Time `db:"created_at"`
 }
 
 type MySQLConnectionEnv struct {
@@ -945,36 +949,25 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 func calculateGraphDataPoint(isuConditions []IsuCondition) (GraphDataPoint, error) {
 	conditionsCount := map[string]int{"is_broken": 0, "is_dirty": 0, "is_overweight": 0}
 	rawScore := 0
+	sittingCount := 0
 	for _, condition := range isuConditions {
-		badConditionsCount := 0
-
-		if !isValidConditionFormat(condition.Condition) {
-			return GraphDataPoint{}, fmt.Errorf("invalid condition format")
+		sittingCount++
+		if condition.IsBroken {
+			conditionsCount["is_broken"] += 1
+		}
+		if condition.IsDirty {
+			conditionsCount["is_dirty"] += 1
+		}
+		if condition.IsOverweight {
+			conditionsCount["is_overweight"] += 1
 		}
 
-		for _, condStr := range strings.Split(condition.Condition, ",") {
-			keyValue := strings.Split(condStr, "=")
-
-			conditionName := keyValue[0]
-			if keyValue[1] == "true" {
-				conditionsCount[conditionName] += 1
-				badConditionsCount++
-			}
-		}
-
-		if badConditionsCount >= 3 {
+		if condition.ConditionLevel >= 3 {
 			rawScore += scoreConditionLevelCritical
-		} else if badConditionsCount >= 1 {
+		} else if condition.ConditionLevel >= 1 {
 			rawScore += scoreConditionLevelWarning
 		} else {
 			rawScore += scoreConditionLevelInfo
-		}
-	}
-
-	sittingCount := 0
-	for _, condition := range isuConditions {
-		if condition.IsSitting {
-			sittingCount++
 		}
 	}
 

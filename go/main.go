@@ -353,7 +353,7 @@ func postInitialize(c echo.Context) error {
 		JIAIsuUUID    string    `db:"jia_isu_uuid"`
 		LastTimestamp time.Time `db:"last_timestamp"`
 	}
-	err = db.SelectContext(ctx, &lastConditionTimestamps, "SELECT jia_isu_uuid, MAX(`timestamp`) AS last_timestamp FROM isu_condition GROUP BY ")
+	err = db.SelectContext(ctx, &lastConditionTimestamps, "SELECT jia_isu_uuid, MAX(`timestamp`) AS last_timestamp FROM isu_condition GROUP BY jia_isu_uuid")
 	if err != nil {
 		c.Logger().Errorf("db error : %v", err)
 		return c.NoContent(http.StatusInternalServerError)

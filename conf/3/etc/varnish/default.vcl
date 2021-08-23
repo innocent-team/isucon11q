@@ -26,6 +26,10 @@ sub vcl_recv {
     if (req.url ~ "^/initialize") {
        ban("obj.http.url ~ ^/api/trend");
     }
+
+    if (req.url ~ "^/api/trend") {
+        unset req.http.cookie;
+    }
 }
 
 sub vcl_backend_response {

@@ -321,7 +321,6 @@ func getJIAServiceURL(ctx context.Context, tx *sqlx.Tx) string {
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
-	latestTrendResponse = nil
 	ctx := c.Request().Context()
 	var request InitializeRequest
 	err := c.Bind(&request)

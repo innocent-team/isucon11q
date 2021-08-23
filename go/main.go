@@ -506,7 +506,15 @@ func getIsuList(c echo.Context) error {
 
 		var formattedCondition *GetIsuConditionResponse
 		if foundLastCondition {
-			conditionLevel, err := calculateConditionLevel(lastCondition.Condition)
+			var conditionLevel string
+			switch lastCondition.ConditionLevel {
+			case 0:
+				conditionLevel = conditionLevelInfo
+			case 1, 2:
+				conditionLevel = conditionLevelWarning
+			case 3:
+				conditionLevel = conditionLevelCritical
+			}
 			if err != nil {
 				c.Logger().Error(err)
 				return c.NoContent(http.StatusInternalServerError)

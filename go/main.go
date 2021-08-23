@@ -1203,7 +1203,7 @@ func getTrend(c echo.Context) error {
 	}
 
 	// アプリケーション側でときどき Cache-Control: public, max-age=1 を付与する
-	cacheControlProbability := 0.1
+	cacheControlProbability := 0.05
 	if rand.Float64() <= cacheControlProbability {
 		c.Logger().Warnf("drop post isu condition request")
 		c.Response().Header().Add("Cache-Control", "public, max-age=1")

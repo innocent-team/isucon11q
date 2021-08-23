@@ -38,6 +38,7 @@ sub vcl_backend_response {
         set beresp.ttl = 1s;
     }
     set beresp.http.Cache-Control = "public, max-age=1";
+    set beresp.do_gzip = true;
 }
 
 sub vcl_deliver {

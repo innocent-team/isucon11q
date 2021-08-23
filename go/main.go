@@ -494,15 +494,10 @@ func getIsuList(c echo.Context) error {
 	responseList := []GetIsuListResponse{}
 	for _, isu := range isuList {
 		var lastCondition IsuCondition
-		foundLastCondition := false
+		foundLastCondition := true
 		item, ok := itemMap[latestIsuConditionKey(isu.JIAIsuUUID)]
 		if ok {
-			foundLastCondition = true
-			err = json.Unmarshal(item.Value, &lastCondition)
-			if err != nil {
-				c.Logger().Errorf("unmarshal error: %v", err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
+			foundLastCondition = item != nil && item.Value != nil
 		} else {
 			err = db.GetContext(ctx, &lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
 				isu.JIAIsuUUID)
@@ -514,7 +509,6 @@ func getIsuList(c echo.Context) error {
 					return c.NoContent(http.StatusInternalServerError)
 				}
 			}
-			foundLastCondition = true
 			marshaled, err := json.Marshal(lastCondition)
 			if err != nil {
 				c.Logger().Errorf("marshal error: %v", err)
@@ -528,6 +522,12 @@ func getIsuList(c echo.Context) error {
 
 		var formattedCondition *GetIsuConditionResponse
 		if foundLastCondition {
+			err = json.Unmarshal(item.Value, &lastCondition)
+			if err != nil {
+				c.Logger().Errorf("unmarshal error: %v", err)
+				return c.NoContent(http.StatusInternalServerError)
+			}
+
 			var conditionLevel string
 			switch lastCondition.ConditionLevel {
 			case 0:

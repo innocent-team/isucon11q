@@ -37,7 +37,7 @@ sub vcl_recv {
     # Typically you clean up the request here, removing cookies you don't need,
     # rewriting the request, etc.
     # アイコン関係ありそうなものは3に寄せる
-    if (req.url ~ "/icon$" || (req.url ~ "^/api/isu" && req.method = "POST")) {
+    if (req.url ~ "/icon$" || (req.url ~ "^/api/isu" && req.method == "POST")) {
         set req.backend_hint = isucondition3;
     } else {
         set req.backend_hint = bar.backend();

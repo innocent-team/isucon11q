@@ -13,7 +13,7 @@
 vcl 4.0;
 
 # Default backend definition. Set this to point to your content server.
-backend default {
+backend isucondition1 {
     .host = "192.168.0.11";
     .port = "3000";
 }
@@ -23,7 +23,12 @@ backend isucondition3 {
     .port = "3000";
 }
 
-# /api/trend は3で受ける
+sub vcl_init {
+    new bar = directors.round_robin();
+    bar.add_backend(isucondition1);
+    bar.add_backend(isucondition3);
+}
+
 sub vcl_recv {
     # Happens before we check if we have this in cache already.
     #
@@ -35,7 +40,6 @@ sub vcl_recv {
 
     if (req.url ~ "^/api/trend") {
         unset req.http.cookie;
-        set req.backend_hint = isucondition3;
     }
 }
 

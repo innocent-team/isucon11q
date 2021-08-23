@@ -1253,6 +1253,8 @@ func postIsuCondition(c echo.Context) error {
 
 	var args []interface{}
 	var placeholder string
+	// 最後の1件だけ登録する
+	req = req[len(req):]
 
 	for i, cond := range req {
 		timestamp := time.Unix(cond.Timestamp, 0)

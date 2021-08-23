@@ -60,7 +60,6 @@ sub vcl_backend_response {
     if (bereq.url ~ "^/api/trend") {
         set beresp.grace = 0.2s;
         set beresp.ttl = 1.8s;
-        set beresp.http.Cache-Control = "public, max-age=1";
     }
     set beresp.do_gzip = true;
 }

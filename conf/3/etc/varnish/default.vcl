@@ -34,8 +34,8 @@ sub vcl_backend_response {
     # Here you clean the response headers, removing silly Set-Cookie headers
     # and other mistakes your backend does.
     if (bereq.url ~ "^/api/trend") {
-        set beresp.grace = 1s;
-        set beresp.ttl = 1s;
+        set beresp.grace = 0.2s;
+        set beresp.ttl = 0.8s;
         set beresp.http.Cache-Control = "public, max-age=1";
     }
     set beresp.do_gzip = true;

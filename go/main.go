@@ -468,16 +468,6 @@ func getIsuList(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	memcacheKey := "get-api-isu-" + jiaUserID
-	item, err := memcacheClient.Get(memcacheKey)
-	if err != nil {
-		c.Logger().Errorf("memcached error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	if item != nil {
-		return c.Blob(http.StatusOK, "application/json", item.Value)
-	}
-
 	isuList := []Isu{}
 	err = db.SelectContext(ctx,
 		&isuList,
@@ -539,19 +529,7 @@ func getIsuList(c echo.Context) error {
 		responseList = append(responseList, res)
 	}
 
-	marshaled, err := json.Marshal(responseList)
-	if err != nil {
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	memcacheClient.Set(&memcache.Item{
-		Key:        memcacheKey,
-		Value:      marshaled,
-		Expiration: 1,
-	})
-
-	return c.Blob(http.StatusOK, "application/json", marshaled)
+	return c.JSON(http.StatusOK, responseList)
 }
 
 const iconDirectory = "/tmp/isucon-icon/"

@@ -1248,7 +1248,7 @@ func postIsuCondition(c echo.Context) error {
 	}
 
 	var args []interface{}
-	var placeholder string
+	var sb strings.Builder
 
 	for i, cond := range req {
 		timestamp := time.Unix(cond.Timestamp, 0)
@@ -1258,16 +1258,16 @@ func postIsuCondition(c echo.Context) error {
 		}
 		args = append(args, jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
 		if i == 0 {
-			placeholder += "(?, ?, ?, ?, ?)"
+			sb.WriteString("(?, ?, ?, ?, ?)")
 		} else {
-			placeholder += ",(?, ?, ?, ?, ?)"
+			sb.WriteString(",(?, ?, ?, ?, ?)")
 		}
 
 	}
 	_, err = db.ExecContext(ctx,
 		"INSERT INTO `isu_condition`"+
 			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
-			"	VALUES "+placeholder,
+			"	VALUES "+sb.String(),
 		args...)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)

@@ -39,6 +39,9 @@ sub vcl_recv {
     # アイコン関係ありそうなものは1に寄せる
     if (req.url ~ "/icon$") {
         set req.backend_hint = isucondition1;
+    } elsif (req.url ~ "/api/condition/" && req.method == "POST") {
+        // conditionの投稿は1に寄せる
+        set req.backend_hint = isucondition1;
     } else {
         set req.backend_hint = bar.backend();
     }

@@ -73,7 +73,7 @@ type Isu struct {
 	UpdatedAt  time.Time `db:"updated_at" json:"-"`
 }
 
-const isuColumnsForJSON = "id, jia_isu_uuid, name, character"
+const isuColumnsForJSON = "id, jia_isu_uuid, name, `character`"
 
 type IsuFromJIA struct {
 	Character string `json:"character"`

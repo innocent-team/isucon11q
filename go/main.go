@@ -1228,7 +1228,6 @@ func postIsuCondition(c echo.Context) error {
 		c.Logger().Warnf("drop post isu condition request")
 		return c.NoContent(http.StatusAccepted)
 	}
-	// log.Print("!!!!!!!!!!!!!post isu condition request ok")
 
 	jiaIsuUUID := c.Param("jia_isu_uuid")
 	if jiaIsuUUID == "" {
@@ -1242,26 +1241,14 @@ func postIsuCondition(c echo.Context) error {
 	} else if len(req) == 0 {
 		return c.String(http.StatusBadRequest, fmt.Sprintf("%+v", req))
 	}
-	log.Print("!!!!!!!!!!!!!request body ok")
-
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
 
 	var isus []struct {
 		Character string `db:"character"`
 		ID        int    `db:"id"`
 	}
-	err = tx.SelectContext(ctx, &isus, "SELECT `character`, `id` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	err = db.SelectContext(ctx, isus, "SELECT `character`, `id` FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.String(http.StatusNotFound, "not found: isu")
-		}
-		c.Logger().Errorf("db error: %v", err)
-		log.Print("!!!!!!!!!!!!!SELECT COUNT(*) FROM `isu` SERVER ERROR!!!!!!!!!!!!!!!!!!!!!!!!")
+		fmt.Printf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	if len(isus) == 0 {
@@ -1271,43 +1258,24 @@ func postIsuCondition(c echo.Context) error {
 	isuID := isus[0].ID
 
 	for _, cond := range req {
-		timestamp := time.Unix(cond.Timestamp, 0)
-
 		if !isValidConditionFormat(cond.Condition) {
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
+	}
+	go func() {
+		for _, cond := range req {
+			timestamp := time.Unix(cond.Timestamp, 0)
 
-		//log.Print("!!!!!!!!!!!!!INSERT INTO `isu_condition`")
-		//_, err = tx.ExecContext(ctx,
-		//	"INSERT INTO `isu_condition`"+
-		//		"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
-		//		"	VALUES (?, ?, ?, ?, ?)",
-		//	jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
+			err = InsertConditions(isuID, jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, character)
 
-		//if err != nil {
-		//	c.Logger().Errorf("db error: %v", err)
-		//	return c.NoContent(http.StatusInternalServerError)
-		//}
-
-		// influxdb あとでgo-routingにする。
-		err = InsertConditions(isuID, jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message, character)
-
-		if err != nil {
-			c.Logger().Errorf("influx error: %v", err)
-			return c.NoContent(http.StatusInternalServerError)
+			if err != nil {
+				fmt.Printf("influx error: %v", err)
+			}
 		}
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	log.Print("!!!!!!!!!!!!!everything is ok")
-
+	}()
 	return c.NoContent(http.StatusAccepted)
 }
+
 
 // ISUのコンディションの文字列がcsv形式になっているか検証
 func isValidConditionFormat(conditionStr string) bool {

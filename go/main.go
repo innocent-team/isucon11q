@@ -470,7 +470,7 @@ func getIsuList(c echo.Context) error {
 
 	memcacheKey := "get-api-isu-" + jiaUserID
 	item, err := memcacheClient.Get(memcacheKey)
-	if err != nil && !errors.Is(err, memcache.ErrCacheMiss) {
+	if err != nil {
 		c.Logger().Errorf("memcached error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}

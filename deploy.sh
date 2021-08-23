@@ -40,6 +40,10 @@ if [[ "$INSTANCE_NUM" == 2 ]]; then
   sudo rm -rf /var/log/mysql/mysql-slow.log
   # sudo systemctl enable mysql
   sudo systemctl restart mysql
+
+  echo "Restarting memcached"
+  sudo cp -a ./conf/$INSTANCE_NUM/etc/memcached.cnf /etc/memcached.cnf
+  sudo systemctl restart memcached
 fi
 
 if [[ "$INSTANCE_NUM" == 3 ]]; then

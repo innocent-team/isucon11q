@@ -18,6 +18,12 @@ backend default {
     .port = "3000";
 }
 
+backend isucondition3 {
+    .host = "127.0.0.1";
+    .port = "3000";
+}
+
+# /api/trend は3で受ける
 sub vcl_recv {
     # Happens before we check if we have this in cache already.
     #
@@ -29,6 +35,7 @@ sub vcl_recv {
 
     if (req.url ~ "^/api/trend") {
         unset req.http.cookie;
+        set req.backend_hint = isucondition3;
     }
 }
 

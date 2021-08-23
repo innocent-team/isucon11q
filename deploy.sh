@@ -22,7 +22,7 @@ set -ex
 
 sudo systemctl daemon-reload
 
-if [[ "$INSTANCE_NUM" == 1 ]]; then
+if [[ "$INSTANCE_NUM" == 1 || "$INSTANCE_NUM" == 3 ]]; then
   echo "Restarting App"
   pushd go
   go build

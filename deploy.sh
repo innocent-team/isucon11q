@@ -53,4 +53,9 @@ if [[ "$INSTANCE_NUM" == 3 ]]; then
   sudo cp -a ./conf/all/etc/nginx/sites-available/isucondition.conf /etc/nginx/sites-available/isucondition.conf
   sudo systemctl enable nginx
   sudo /opt/sbin/nginx -c /etc/nginx/nginx.conf -t &&  sudo systemctl restart nginx
+
+  echo "Restarting varnish"
+  sudo cp -a ./conf/3/etc/varnish/default.vcl /etc/varnish/default.vcl
+  sudo systemctl enable varnish
+  sudo systemctl restart varnish
 fi

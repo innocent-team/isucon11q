@@ -1239,7 +1239,7 @@ func postIsuCondition(c echo.Context) error {
 
 	var found int
 	err = db.GetContext(ctx, &found, "SELECT 1 FROM `isu` WHERE `jia_isu_uuid` = ? LIMIT 1", jiaIsuUUID)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}

@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bradfitz/gomemcache/memcache"
+	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
@@ -47,6 +49,7 @@ const (
 var (
 	db                  *sqlx.DB
 	sessionStore        sessions.Store
+	memcacheClient      *memcache.Client
 	mySQLConnectionData *MySQLConnectionEnv
 
 	jiaJWTSigningKey *ecdsa.PublicKey
@@ -199,7 +202,8 @@ func (mc *MySQLConnectionEnv) ConnectDB() (*sqlx.DB, error) {
 }
 
 func init() {
-	sessionStore = sessions.NewCookieStore([]byte(getEnv("SESSION_KEY", "isucondition")))
+	memcacheClient = memcache.New(getEnv("MEMCACHED_ADDR", "localhost:11211"))
+	sessionStore = gsm.NewMemcacheStore(memcacheClient, "session_prefix_", []byte("secret-key-goes-here"))
 
 	key, err := ioutil.ReadFile(jiaJWTSigningKeyPath)
 	if err != nil {

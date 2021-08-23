@@ -951,7 +951,9 @@ func calculateGraphDataPoint(isuConditions []IsuCondition) (GraphDataPoint, erro
 	rawScore := 0
 	sittingCount := 0
 	for _, condition := range isuConditions {
-		sittingCount++
+		if condition.IsSitting {
+			sittingCount++
+		}
 		if condition.IsBroken {
 			conditionsCount["is_broken"] += 1
 		}

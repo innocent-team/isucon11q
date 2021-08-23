@@ -72,7 +72,6 @@ func InsertConditions(isuID int, jiaIsuUUID string, timestamp time.Time, isSitti
 		return fmt.Errorf("Error CreatePoint: %w", err)
 	}
 	conditionPoints.AddPoint(point)
-	WriteCondition()
 	return nil
 }
 

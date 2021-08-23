@@ -35,11 +35,7 @@ sub vcl_backend_response {
     # and other mistakes your backend does.
     if (bereq.url ~ "^/api/trend") {
         set beresp.grace = 1s;
-        if (beresp.http.X-Dashboard-Freezed-Until && std.time(beresp.http.X-Dashboard-Freezed-Until, now) > now) {
-            set beresp.ttl = std.time(beresp.http.X-Dashboard-Freezed-Until, now) - now;
-        } else {
-            set beresp.ttl = 1s;
-        }
+        set beresp.ttl = 1s;
     }
 }
 

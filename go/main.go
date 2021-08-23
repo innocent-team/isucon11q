@@ -497,7 +497,7 @@ func getIsuList(c echo.Context) error {
 		foundLastCondition := true
 		item, ok := itemMap[latestIsuConditionKey(isu.JIAIsuUUID)]
 		if ok {
-			foundLastCondition = true
+			foundLastCondition = item != nil && item.Value != nil
 		} else {
 			err = db.GetContext(ctx, &lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
 				isu.JIAIsuUUID)
@@ -1300,7 +1300,7 @@ func postIsuCondition(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	cLevel, err := calculateConditionLevel(lastCondition.Condition)
-	switch (cLevel) {
+	switch cLevel {
 	case conditionLevelCritical:
 		lastCondition.ConditionLevel = 3
 	case conditionLevelWarning:

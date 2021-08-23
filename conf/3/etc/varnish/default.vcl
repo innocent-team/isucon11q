@@ -46,7 +46,7 @@ sub vcl_backend_response {
     # and other mistakes your backend does.
     if (bereq.url ~ "^/api/trend") {
         set beresp.grace = 0.2s;
-        set beresp.ttl = 0.4s;
+        set beresp.ttl = 0.8s;
     }
     set beresp.do_gzip = true;
 }

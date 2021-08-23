@@ -1168,21 +1168,16 @@ func getTrend(c echo.Context) error {
 				return c.NoContent(http.StatusInternalServerError)
 			}
 
-			conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
-			if err != nil {
-				c.Logger().Error(err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
 			trendCondition := TrendCondition{
 				ID:        isu.ID,
 				Timestamp: isuLastCondition.Timestamp.Unix(),
 			}
-			switch conditionLevel {
-			case "info":
+			switch isuLastCondition.ConditionLevel {
+			case 0:
 				characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
-			case "warning":
+			case 1, 2:
 				characterWarningIsuConditions = append(characterWarningIsuConditions, &trendCondition)
-			case "critical":
+			case 3:
 				characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
 			}
 

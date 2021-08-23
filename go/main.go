@@ -481,53 +481,24 @@ func getIsuList(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	var latestKeys []string
-	for _, isu := range isuList {
-		latestKeys = append(latestKeys, latestIsuConditionKey(isu.JIAIsuUUID))
-	}
-	itemMap, err := memcacheClient.GetMulti(latestKeys)
-	if err != nil {
-		c.Logger().Errorf("memcached error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
 
 	responseList := []GetIsuListResponse{}
 	for _, isu := range isuList {
 		var lastCondition IsuCondition
 		foundLastCondition := true
-		item, ok := itemMap[latestIsuConditionKey(isu.JIAIsuUUID)]
-		if ok {
-			foundLastCondition = true
-		} else {
-			err = db.GetContext(ctx, &lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
-				isu.JIAIsuUUID)
-			if err != nil {
-				if errors.Is(err, sql.ErrNoRows) {
-					foundLastCondition = false
-				} else {
-					c.Logger().Errorf("db error: %v", err)
-					return c.NoContent(http.StatusInternalServerError)
-				}
-			}
-			marshaled, err := json.Marshal(lastCondition)
-			if err != nil {
-				c.Logger().Errorf("marshal error: %v", err)
+		err = db.GetContext(ctx, &lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
+			isu.JIAIsuUUID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				foundLastCondition = false
+			} else {
+				c.Logger().Errorf("db error: %v", err)
 				return c.NoContent(http.StatusInternalServerError)
 			}
-			memcacheClient.Set(&memcache.Item{
-				Key:   latestIsuConditionKey(isu.JIAIsuUUID),
-				Value: marshaled,
-			})
 		}
 
 		var formattedCondition *GetIsuConditionResponse
 		if foundLastCondition {
-			err = json.Unmarshal(item.Value, &lastCondition)
-			if err != nil {
-				c.Logger().Errorf("unmarshal error: %v", err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
-
 			var conditionLevel string
 			switch lastCondition.ConditionLevel {
 			case 0:
@@ -1298,15 +1269,6 @@ func postIsuCondition(c echo.Context) error {
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
-	}
-	cLevel, err := calculateConditionLevel(lastCondition.Condition)
-	switch (cLevel) {
-	case conditionLevelCritical:
-		lastCondition.ConditionLevel = 3
-	case conditionLevelWarning:
-		lastCondition.ConditionLevel = 1
-	case conditionLevelInfo:
-		lastCondition.ConditionLevel = 0
 	}
 	marshal, err := json.Marshal(lastCondition)
 	if err != nil {

@@ -42,7 +42,7 @@ if [[ "$INSTANCE_NUM" == 2 ]]; then
   sudo systemctl restart mysql
 
   echo "Restarting memcached"
-  sudo cp -a ./conf/$INSTANCE_NUM/etc/memcached.cnf /etc/memcached.cnf
+  sudo cp -a ./conf/$INSTANCE_NUM/etc/memcached.conf /etc/memcached.conf
   sudo systemctl restart memcached
 fi
 

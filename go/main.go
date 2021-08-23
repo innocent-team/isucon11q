@@ -484,9 +484,9 @@ func getIsuList(c echo.Context) error {
 	for i, isu := range isuList {
 		jiaIsuUUIDs = append(jiaIsuUUIDs, isu.JIAIsuUUID)
 		if i == 0 {
-			sb.WriteString("SELECT (SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1) ")
+			sb.WriteString(fmt.Sprintf("SELECT * FROM (SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1) t%d ", i))
 		} else {
-			sb.WriteString("UNION SELECT (SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1) ")
+			sb.WriteString(fmt.Sprintf("UNION SELECT * FROM (SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1) t%d ", i))
 		}
 	}
 	var lastIsuConditions []IsuCondition

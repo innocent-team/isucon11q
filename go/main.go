@@ -512,9 +512,11 @@ func getIsuList(c echo.Context) error {
 		}
 	}
 	sb.WriteString(")")
+	query := sb.String()
+	log.Print(query)
 
 	var lastConditions []IsuCondition
-	err = db.SelectContext(ctx, &lastConditions, sb.String(), args...)
+	err = db.SelectContext(ctx, &lastConditions, query, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return c.JSON(http.StatusOK, responseList)

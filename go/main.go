@@ -513,7 +513,6 @@ func getIsuList(c echo.Context) error {
 	}
 	sb.WriteString(")")
 	query := sb.String()
-	log.Print(query)
 	if len(args) == 0 {
 		return c.JSON(http.StatusOK, responseList)
 	}

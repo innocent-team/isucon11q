@@ -1304,7 +1304,7 @@ func postIsuCondition(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	_, err = db.ExecContext(ctx, "UPDATE `isu_condition` SET `last_condition_timestamp` = ? WHERE `jia_isu_uuid` = ?", lastCondition.Timestamp, jiaIsuUUID)
+	_, err = db.ExecContext(ctx, "UPDATE `isu` SET `last_condition_timestamp` = ? WHERE `jia_isu_uuid` = ?", lastCondition.Timestamp, jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)

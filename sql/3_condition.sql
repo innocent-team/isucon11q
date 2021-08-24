@@ -19,3 +19,5 @@ ALTER TABLE `isu_condition` ADD (
     `is_overweight` TINYINT(1) AS (`condition` REGEXP 'is_overweight=true') STORED,
     `condition_level` TINYINT(1) AS (`is_dirty` + `is_overweight` + `is_broken`) STORED
 );
+
+ALTER TABLE `isu` ADD COLUMN  `last_condition_timestamp` DATETIME NOT NULL DEFAULT '2000-01-01 00:00:00';

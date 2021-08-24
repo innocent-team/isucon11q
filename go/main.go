@@ -493,27 +493,43 @@ func getIsuList(c echo.Context) error {
 	isuList := []Isu{}
 	err = db.SelectContext(ctx,
 		&isuList,
-		"SELECT "+isuColumnsForJSON+" FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC",
+		"SELECT "+isuColumnsForJSON+", `last_condition_timestamp` FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC",
 		jiaUserID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-
 	responseList := []GetIsuListResponse{}
-	for _, isu := range isuList {
-		var lastCondition IsuCondition
-		foundLastCondition := true
-		err = db.GetContext(ctx, &lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
-			isu.JIAIsuUUID)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				foundLastCondition = false
-			} else {
-				c.Logger().Errorf("db error: %v", err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
+	var args []interface{}
+	var sb strings.Builder
+	sb.WriteString("SELECT * FROM `isu_condition` WHERE (`jia_isu_uuid`, `timestamp`) IN (")
+	for i, isu := range isuList {
+		args = append(args, isu.JIAIsuUUID, isu.LastTimestamp)
+		if i == 0 {
+			sb.WriteString("(?, ?)")
+		} else {
+			sb.WriteString(",(?, ?)")
 		}
+	}
+	sb.WriteString(")")
+
+	var lastConditions []IsuCondition
+	err = db.SelectContext(ctx, &lastConditions, sb.String(), args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.JSON(http.StatusOK, responseList)
+		} else {
+			c.Logger().Errorf("db error: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+	}
+	lastConditionByJIAIsuUUID := make(map[string]IsuCondition)
+	for _, c := range lastConditions {
+		lastConditionByJIAIsuUUID[c.JIAIsuUUID] = c
+	}
+
+	for _, isu := range isuList {
+		lastCondition, foundLastCondition := lastConditionByJIAIsuUUID[isu.JIAIsuUUID]
 
 		var formattedCondition *GetIsuConditionResponse
 		if foundLastCondition {

@@ -1170,7 +1170,7 @@ func getTrend(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	allIsu := []Isu{}
-	err := db.SelectContext(ctx, &allIsu, "SELECT "+isuColumnsForJSON+" FROM `isu`")
+	err := db.SelectContext(ctx, &allIsu, "SELECT "+isuColumnsForJSON+", `last_condition_timestamp` FROM `isu`")
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -1181,23 +1181,46 @@ func getTrend(c echo.Context) error {
 	}
 
 	res := []TrendResponse{}
+	var args []interface{}
+	var sb strings.Builder
+	sb.WriteString("SELECT * FROM `isu_condition` WHERE (`jia_isu_uuid`, `timestamp`) IN (")
+	for i, isu := range allIsu {
+		args = append(args, isu.JIAIsuUUID, isu.LastTimestamp)
+		if i == 0 {
+			sb.WriteString("(?, ?)")
+		} else {
+			sb.WriteString(",(?, ?)")
+		}
+	}
+	sb.WriteString(")")
+	query := sb.String()
+	if len(args) == 0 {
+		return c.JSON(http.StatusOK, res)
+	}
+
+	var lastConditions []IsuCondition
+	err = db.SelectContext(ctx, &lastConditions, query, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.JSON(http.StatusOK, res)
+		} else {
+			c.Logger().Errorf("db error: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+	}
+	lastConditionByJIAIsuUUID := make(map[string]IsuCondition)
+	for _, c := range lastConditions {
+		lastConditionByJIAIsuUUID[c.JIAIsuUUID] = c
+	}
 
 	for character, isuList := range isusByCharacter {
 		characterInfoIsuConditions := []*TrendCondition{}
 		characterWarningIsuConditions := []*TrendCondition{}
 		characterCriticalIsuConditions := []*TrendCondition{}
 		for _, isu := range isuList {
-			isuLastCondition := IsuCondition{}
-			err = db.GetContext(ctx, &isuLastCondition,
-				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC LIMIT 1",
-				isu.JIAIsuUUID,
-			)
-			if err != nil {
-				if errors.Is(err, sql.ErrNoRows) {
-					continue
-				}
-				c.Logger().Errorf("db error: %v", err)
-				return c.NoContent(http.StatusInternalServerError)
+			isuLastCondition, found := lastConditionByJIAIsuUUID[isu.JIAIsuUUID]
+			if !found {
+				continue
 			}
 
 			trendCondition := TrendCondition{
